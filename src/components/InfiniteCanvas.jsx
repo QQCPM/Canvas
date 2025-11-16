@@ -3,9 +3,9 @@ import { Plus, Type, Square, Image, Link, GitBranch, Move, ZoomIn, ZoomOut, X, M
 
 const InfiniteCanvas = () => {
   const [elements, setElements] = useState([
-    { id: 1, type: 'sticky', x: 100, y: 100, width: 150, height: 150, content: 'Start', color: 'bg-purple-400', drawing: null },
-    { id: 2, type: 'sticky', x: 300, y: 100, width: 150, height: 150, content: 'Stop', color: 'bg-green-400', drawing: null },
-    { id: 3, type: 'sticky', x: 500, y: 100, width: 150, height: 150, content: 'Continue', color: 'bg-orange-400', drawing: null },
+    { id: 1, type: 'note', x: 100, y: 100, width: 150, height: 150, content: 'Start Here', color: 'bg-purple-400', drawing: null },
+    { id: 2, type: 'drawing', x: 300, y: 100, width: 200, height: 200, content: '', color: 'bg-white', drawing: null },
+    { id: 3, type: 'note', x: 550, y: 100, width: 150, height: 150, content: 'Ideas', color: 'bg-orange-400', drawing: null },
   ]);
 
   const [connections, setConnections] = useState([]);
@@ -35,11 +35,12 @@ const InfiniteCanvas = () => {
 
   const tools = [
     { id: 'move', icon: Move, label: 'Move' },
-    { id: 'sticky', icon: Square, label: 'Sticky Note' },
-    { id: 'text', icon: Type, label: 'Text' },
-    { id: 'image', icon: Image, label: 'Image' },
-    { id: 'link', icon: Link, label: 'Link' },
-    { id: 'mindmap', icon: GitBranch, label: 'Mind Map' },
+    { id: 'note', icon: Square, label: 'Note Block' },
+    { id: 'drawing', icon: Pen, label: 'Drawing Block' },
+    { id: 'text', icon: Type, label: 'Text Block' },
+    { id: 'image', icon: Image, label: 'Image Block' },
+    { id: 'website', icon: Link, label: 'Website Block' },
+    { id: 'mindmap', icon: GitBranch, label: 'Mind Map Block' },
     { id: 'connector', icon: Minus, label: 'Connect' },
   ];
 
@@ -65,18 +66,22 @@ const InfiniteCanvas = () => {
           type: selectedTool,
           x,
           y,
-          width: selectedTool === 'sticky' ? 150 :
+          width: selectedTool === 'note' ? 150 :
+                 selectedTool === 'drawing' ? 200 :
                  selectedTool === 'mindmap' ? 150 :
-                 selectedTool === 'image' ? 200 : 200,
-          height: selectedTool === 'sticky' ? 150 :
+                 selectedTool === 'image' ? 200 :
+                 selectedTool === 'website' ? 300 : 200,
+          height: selectedTool === 'note' ? 150 :
+                  selectedTool === 'drawing' ? 200 :
                   selectedTool === 'mindmap' ? 150 :
-                  selectedTool === 'image' ? 200 : 100,
-          content: selectedTool === 'sticky' ? 'New note' :
+                  selectedTool === 'image' ? 200 :
+                  selectedTool === 'website' ? 200 : 100,
+          content: selectedTool === 'note' ? 'New note...' :
                    selectedTool === 'text' ? 'Type here...' :
-                   selectedTool === 'link' ? 'https://example.com' :
+                   selectedTool === 'website' ? 'https://example.com' :
                    selectedTool === 'mindmap' ? 'Central Idea' :
-                   'New element',
-          color: selectedTool === 'sticky' ? stickyColors[Math.floor(Math.random() * stickyColors.length)] : 'bg-white',
+                   '',
+          color: selectedTool === 'note' ? stickyColors[Math.floor(Math.random() * stickyColors.length)] : 'bg-white',
           drawing: null,
         };
 
@@ -424,18 +429,40 @@ const InfiniteCanvas = () => {
     };
 
     switch (element.type) {
-      case 'sticky':
+      case 'note':
         return (
           <div
             key={element.id}
-            className={`${commonClasses} ${element.color} p-4 flex items-center justify-center relative group`}
+            className={`${commonClasses} ${element.color} p-4 flex flex-col relative group`}
             style={commonStyle}
             onMouseDown={(e) => handleElementMouseDown(e, element)}
             onClick={(e) => handleElementClick(e, element)}
           >
-            <p className="text-center font-medium text-gray-800 break-words overflow-hidden">
+            <Square className="w-4 h-4 text-gray-700 mb-1 opacity-60" />
+            <p className="text-sm font-medium text-gray-800 break-words overflow-hidden flex-1">
               {element.content}
             </p>
+            {renderResizeHandles(element)}
+          </div>
+        );
+
+      case 'drawing':
+        return (
+          <div
+            key={element.id}
+            className={`${commonClasses} bg-white border-2 border-gray-300 p-2 flex flex-col items-center justify-center relative group overflow-hidden`}
+            style={commonStyle}
+            onMouseDown={(e) => handleElementMouseDown(e, element)}
+            onClick={(e) => handleElementClick(e, element)}
+          >
+            {element.drawing ? (
+              <img src={element.drawing} alt="Drawing" className="w-full h-full object-contain" />
+            ) : (
+              <div className="text-center">
+                <Pen className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500 text-xs">Drawing Block</p>
+              </div>
+            )}
             {renderResizeHandles(element)}
           </div>
         );
@@ -444,27 +471,29 @@ const InfiniteCanvas = () => {
         return (
           <div
             key={element.id}
-            className={`${commonClasses} bg-transparent p-2 relative group`}
+            className={`${commonClasses} bg-white border-2 border-gray-200 p-4 relative group`}
             style={commonStyle}
             onMouseDown={(e) => handleElementMouseDown(e, element)}
             onClick={(e) => handleElementClick(e, element)}
           >
-            <p className="text-gray-800 text-lg overflow-hidden">{element.content}</p>
+            <Type className="w-4 h-4 text-gray-500 mb-2" />
+            <p className="text-gray-800 text-sm overflow-hidden">{element.content}</p>
             {renderResizeHandles(element)}
           </div>
         );
 
-      case 'link':
+      case 'website':
         return (
           <div
             key={element.id}
-            className={`${commonClasses} bg-blue-50 border-2 border-blue-300 p-3 relative group`}
+            className={`${commonClasses} bg-blue-50 border-2 border-blue-300 p-3 flex flex-col relative group`}
             style={commonStyle}
             onMouseDown={(e) => handleElementMouseDown(e, element)}
             onClick={(e) => handleElementClick(e, element)}
           >
-            <Link className="w-5 h-5 text-blue-600 mb-1" />
-            <p className="text-blue-600 text-sm break-all overflow-hidden">{element.content}</p>
+            <Link className="w-5 h-5 text-blue-600 mb-2" />
+            <p className="text-blue-600 text-xs break-all overflow-hidden">{element.content}</p>
+            <p className="text-gray-500 text-xs mt-1">Website Block</p>
             {renderResizeHandles(element)}
           </div>
         );
@@ -473,12 +502,13 @@ const InfiniteCanvas = () => {
         return (
           <div
             key={element.id}
-            className={`${commonClasses} bg-gradient-to-br from-purple-100 to-pink-100 border-2 border-purple-300 p-4 rounded-full flex items-center justify-center relative group`}
+            className={`${commonClasses} bg-gradient-to-br from-purple-100 to-pink-100 border-2 border-purple-300 p-4 rounded-full flex flex-col items-center justify-center relative group`}
             style={commonStyle}
             onMouseDown={(e) => handleElementMouseDown(e, element)}
             onClick={(e) => handleElementClick(e, element)}
           >
-            <p className="text-center font-semibold text-purple-800 text-sm overflow-hidden">
+            <GitBranch className="w-6 h-6 text-purple-700 mb-1" />
+            <p className="text-center font-semibold text-purple-800 text-xs overflow-hidden">
               {element.content}
             </p>
             {renderResizeHandles(element)}
@@ -489,15 +519,13 @@ const InfiniteCanvas = () => {
         return (
           <div
             key={element.id}
-            className={`${commonClasses} bg-gray-100 border-2 border-gray-300 p-4 flex items-center justify-center relative group`}
+            className={`${commonClasses} bg-gray-100 border-2 border-gray-300 p-4 flex flex-col items-center justify-center relative group`}
             style={commonStyle}
             onMouseDown={(e) => handleElementMouseDown(e, element)}
             onClick={(e) => handleElementClick(e, element)}
           >
-            <div className="text-center">
-              <Image className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">Click to edit</p>
-            </div>
+            <Image className="w-12 h-12 text-gray-400 mb-2" />
+            <p className="text-gray-500 text-xs">Image Block</p>
             {renderResizeHandles(element)}
           </div>
         );
@@ -608,136 +636,226 @@ const InfiniteCanvas = () => {
         </div>
       </div>
 
-      {/* Full Screen Edit Modal */}
+      {/* Specialized Full-Screen Editors */}
       {editingElement && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-30 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-[95vw] h-[95vh] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-800">
-                  {editingElement.type.charAt(0).toUpperCase() + editingElement.type.slice(1)}
-                </h2>
-                <p className="text-sm text-gray-600 mt-1">Click to type, draw, and customize</p>
-              </div>
-              <button
-                onClick={() => setEditingElement(null)}
-                className="p-3 hover:bg-white rounded-xl transition-all hover:shadow-md"
-                title="Close (Esc)"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-30">
 
-            {/* Main Content Area */}
-            <div className="flex-1 flex overflow-hidden">
-              {/* Left Panel - Text Editor */}
-              <div className="w-1/2 p-6 flex flex-col border-r border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-700">Text Content</h3>
-                  {editingElement.type === 'sticky' && (
-                    <div className="flex gap-2">
-                      {stickyColors.map(color => (
-                        <button
-                          key={color}
-                          onClick={() => {
-                            setElements(elements.map(el =>
-                              el.id === editingElement.id ? { ...el, color } : el
-                            ));
-                            setEditingElement({ ...editingElement, color });
-                          }}
-                          className={`w-8 h-8 ${color} rounded-lg border-2 ${
-                            editingElement.color === color ? 'border-gray-800 ring-2 ring-gray-400' : 'border-gray-300'
-                          } hover:scale-110 transition-transform`}
-                          title="Change color"
-                        />
-                      ))}
-                    </div>
-                  )}
+          {/* NOTE BLOCK - Full notepad interface */}
+          {editingElement.type === 'note' && (
+            <div className="bg-white rounded-3xl shadow-2xl w-[90vw] h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200" style={{ background: editingElement.color.replace('bg-', 'linear-gradient(to right, ') + ', white)' }}>
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-800">Note Block</h2>
+                  <p className="text-sm text-gray-600 mt-1">Full notepad for your ideas</p>
                 </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-2">
+                    {stickyColors.map(color => (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          setElements(elements.map(el =>
+                            el.id === editingElement.id ? { ...el, color } : el
+                          ));
+                          setEditingElement({ ...editingElement, color });
+                        }}
+                        className={`w-8 h-8 ${color} rounded-lg border-2 ${
+                          editingElement.color === color ? 'border-gray-800 ring-2 ring-gray-400' : 'border-gray-300'
+                        } hover:scale-110 transition-transform`}
+                      />
+                    ))}
+                  </div>
+                  <button onClick={() => setEditingElement(null)} className="p-3 hover:bg-gray-100 rounded-xl">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 p-8">
                 <textarea
                   value={editingElement.content}
                   onChange={(e) => updateElementContent(e.target.value)}
-                  className="flex-1 p-6 border-2 border-gray-300 rounded-2xl resize-none focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 text-xl transition-all font-sans"
-                  placeholder="Type your content here..."
+                  className="w-full h-full p-8 border-2 border-gray-300 rounded-2xl resize-none focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 text-2xl transition-all font-sans"
+                  placeholder="Start typing your notes..."
                   autoFocus
+                  style={{ lineHeight: '1.8' }}
                 />
               </div>
+              <div className="flex justify-between p-6 border-t border-gray-200 bg-gray-50">
+                <button onClick={deleteElement} className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium">Delete</button>
+                <button onClick={() => setEditingElement(null)} className="px-8 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-medium">Done</button>
+              </div>
+            </div>
+          )}
 
-              {/* Right Panel - Drawing Canvas */}
-              <div className="w-1/2 p-6 flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-700">Drawing Area</h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setDrawingTool('pen')}
-                      className={`p-2 rounded-lg transition-all ${
-                        drawingTool === 'pen'
-                          ? 'bg-blue-500 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                      title="Pen"
-                    >
-                      <Pen className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => setDrawingTool('eraser')}
-                      className={`p-2 rounded-lg transition-all ${
-                        drawingTool === 'eraser'
-                          ? 'bg-blue-500 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                      title="Eraser"
-                    >
-                      <Eraser className="w-5 h-5" />
-                    </button>
-                    <input
-                      type="color"
-                      value={drawingColor}
-                      onChange={(e) => setDrawingColor(e.target.value)}
-                      className="w-10 h-10 rounded-lg cursor-pointer border-2 border-gray-300"
-                      title="Drawing color"
-                    />
-                    <button
-                      onClick={clearDrawing}
-                      className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium ml-2"
-                    >
-                      Clear
-                    </button>
-                  </div>
+          {/* DRAWING BLOCK - Full drawing canvas */}
+          {editingElement.type === 'drawing' && (
+            <div className="bg-white rounded-3xl shadow-2xl w-[90vw] h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-800">Drawing Block</h2>
+                  <p className="text-sm text-gray-600 mt-1">Full canvas for drawing and sketching</p>
                 </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setDrawingTool('pen')} className={`p-3 rounded-lg ${drawingTool === 'pen' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
+                    <Pen className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => setDrawingTool('eraser')} className={`p-3 rounded-lg ${drawingTool === 'eraser' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
+                    <Eraser className="w-5 h-5" />
+                  </button>
+                  <input type="color" value={drawingColor} onChange={(e) => setDrawingColor(e.target.value)} className="w-12 h-12 rounded-lg cursor-pointer" />
+                  <button onClick={clearDrawing} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-medium">Clear Canvas</button>
+                  <button onClick={() => setEditingElement(null)} className="p-3 hover:bg-gray-100 rounded-xl">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 p-6">
                 <canvas
                   ref={drawingCanvasRef}
-                  className="flex-1 border-2 border-gray-300 rounded-2xl cursor-crosshair bg-white"
+                  className="w-full h-full border-2 border-gray-300 rounded-2xl cursor-crosshair bg-white shadow-inner"
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
                   onMouseLeave={stopDrawing}
                 />
-                <p className="text-sm text-gray-500 mt-2">
-                  Use your mouse to draw on the canvas. Drawings are saved automatically.
-                </p>
+              </div>
+              <div className="flex justify-between p-6 border-t border-gray-200 bg-gray-50">
+                <button onClick={deleteElement} className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium">Delete</button>
+                <button onClick={() => setEditingElement(null)} className="px-8 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-medium">Done</button>
               </div>
             </div>
+          )}
 
-            {/* Footer */}
-            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
-              <button
-                onClick={deleteElement}
-                className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-medium shadow-md hover:shadow-lg"
-              >
-                Delete Element
-              </button>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setEditingElement(null)}
-                  className="px-8 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium shadow-md hover:shadow-lg"
-                >
-                  Done
+          {/* TEXT BLOCK - Rich text editor */}
+          {editingElement.type === 'text' && (
+            <div className="bg-white rounded-3xl shadow-2xl w-[90vw] h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-800">Text Block</h2>
+                  <p className="text-sm text-gray-600 mt-1">Large text area for paragraphs</p>
+                </div>
+                <button onClick={() => setEditingElement(null)} className="p-3 hover:bg-gray-100 rounded-xl">
+                  <X className="w-6 h-6" />
                 </button>
               </div>
+              <div className="flex-1 p-8">
+                <textarea
+                  value={editingElement.content}
+                  onChange={(e) => updateElementContent(e.target.value)}
+                  className="w-full h-full p-8 border-2 border-gray-300 rounded-2xl resize-none focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 text-xl transition-all"
+                  placeholder="Type your text content here..."
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-between p-6 border-t border-gray-200 bg-gray-50">
+                <button onClick={deleteElement} className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium">Delete</button>
+                <button onClick={() => setEditingElement(null)} className="px-8 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-medium">Done</button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* WEBSITE BLOCK - Website preview/embed */}
+          {editingElement.type === 'website' && (
+            <div className="bg-white rounded-3xl shadow-2xl w-[90vw] h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-blue-50">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-800">Website Block</h2>
+                  <p className="text-sm text-gray-600 mt-1">Embed and preview websites</p>
+                </div>
+                <button onClick={() => setEditingElement(null)} className="p-3 hover:bg-white rounded-xl">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6 border-b border-gray-200">
+                <input
+                  type="url"
+                  value={editingElement.content}
+                  onChange={(e) => updateElementContent(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 text-lg"
+                  placeholder="https://example.com"
+                />
+              </div>
+              <div className="flex-1 p-6 bg-gray-100">
+                {editingElement.content.startsWith('http') ? (
+                  <iframe
+                    src={editingElement.content}
+                    className="w-full h-full border-2 border-gray-300 rounded-2xl bg-white"
+                    title="Website Preview"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    <div className="text-center">
+                      <Link className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                      <p>Enter a valid URL to preview the website</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-between p-6 border-t border-gray-200 bg-gray-50">
+                <button onClick={deleteElement} className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium">Delete</button>
+                <button onClick={() => setEditingElement(null)} className="px-8 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-medium">Done</button>
+              </div>
+            </div>
+          )}
+
+          {/* MIND MAP BLOCK - Mind mapping interface */}
+          {editingElement.type === 'mindmap' && (
+            <div className="bg-white rounded-3xl shadow-2xl w-[90vw] h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-800">Mind Map Block</h2>
+                  <p className="text-sm text-gray-600 mt-1">Central idea and connections</p>
+                </div>
+                <button onClick={() => setEditingElement(null)} className="p-3 hover:bg-white rounded-xl">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="flex-1 p-8 flex items-center justify-center">
+                <div className="text-center max-w-2xl">
+                  <GitBranch className="w-24 h-24 mx-auto mb-6 text-purple-500" />
+                  <input
+                    type="text"
+                    value={editingElement.content}
+                    onChange={(e) => updateElementContent(e.target.value)}
+                    className="w-full p-6 border-2 border-purple-300 rounded-2xl text-center text-3xl font-bold focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100 mb-4"
+                    placeholder="Central Idea..."
+                  />
+                  <p className="text-gray-500 text-lg">Use connector tool to link to other blocks</p>
+                </div>
+              </div>
+              <div className="flex justify-between p-6 border-t border-gray-200 bg-gray-50">
+                <button onClick={deleteElement} className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium">Delete</button>
+                <button onClick={() => setEditingElement(null)} className="px-8 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-medium">Done</button>
+              </div>
+            </div>
+          )}
+
+          {/* IMAGE BLOCK - Image viewer/uploader */}
+          {editingElement.type === 'image' && (
+            <div className="bg-white rounded-3xl shadow-2xl w-[90vw] h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-800">Image Block</h2>
+                  <p className="text-sm text-gray-600 mt-1">Upload and view images</p>
+                </div>
+                <button onClick={() => setEditingElement(null)} className="p-3 hover:bg-gray-100 rounded-xl">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="flex-1 p-8 flex items-center justify-center bg-gray-100">
+                <div className="border-4 border-dashed border-gray-300 rounded-3xl p-16 text-center hover:border-blue-400 transition-colors cursor-pointer w-full max-w-3xl">
+                  <Image className="w-32 h-32 text-gray-400 mx-auto mb-6" />
+                  <h3 className="text-2xl font-bold text-gray-700 mb-2">Upload Image</h3>
+                  <p className="text-gray-500 text-lg mb-4">Drag and drop or click to browse</p>
+                  <p className="text-gray-400">(Image upload feature - coming in full version)</p>
+                </div>
+              </div>
+              <div className="flex justify-between p-6 border-t border-gray-200 bg-gray-50">
+                <button onClick={deleteElement} className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium">Delete</button>
+                <button onClick={() => setEditingElement(null)} className="px-8 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-medium">Done</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

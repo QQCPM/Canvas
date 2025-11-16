@@ -13,7 +13,9 @@ A modern, interactive infinite canvas prototype inspired by Miro, built with Rea
   - Mind map nodes
 - **Connection Lines**: Draw arrows to connect elements together
 - **Drag & Drop**: Move elements freely across the canvas
-- **Rich Editing**: Double-click any element to open a full editing modal
+- **Resizable Elements**: Resize any box using corner handles
+- **Full-Screen Editor**: Click any element to open a nearly full-screen editing modal
+- **Drawing Canvas**: Built-in drawing area with pen and eraser tools
 - **Intuitive Controls**: Easy-to-use toolbar with visual feedback
 
 ## Getting Started
@@ -58,13 +60,18 @@ npm run preview
 1. **Select a Tool**: Click on any tool in the top toolbar
 2. **Create Elements**: Click anywhere on the canvas to create a new element
 3. **Move Elements**: Drag elements to reposition them
-4. **Edit Content**: Double-click any element to open the editing modal
-5. **Connect Elements**:
+4. **Resize Elements**: Drag the corner handles (blue dots) to resize any box
+5. **Edit Content**: Click any element to open the full-screen editor
+   - Left panel: Type and edit text content
+   - Right panel: Draw with pen and eraser tools
+   - Choose colors for sticky notes
+   - Drawings are saved automatically
+6. **Connect Elements**:
    - Click the connector tool (line icon)
    - Click on the first element
    - Click on the second element to create a connection
-6. **Pan Canvas**: Click and drag on empty canvas space (or use Move tool)
-7. **Zoom**: Use the zoom controls in the top-right corner
+7. **Pan Canvas**: Click and drag on empty canvas space (or use Move tool)
+8. **Zoom**: Use the zoom controls in the top-right corner
 
 ## Keyboard Shortcuts
 
@@ -94,15 +101,26 @@ Canvas/
 └── vite.config.js              # Vite configuration
 ```
 
+## Current Features
+
+✅ Infinite pan and zoom canvas
+✅ Multiple element types (sticky notes, text, links, mind maps, images)
+✅ Connection lines between elements
+✅ Resizable elements with corner handles
+✅ Full-screen editor with dual panels
+✅ Drawing canvas with pen and eraser
+✅ Color customization for sticky notes
+
 ## Future Enhancements
 
 - Image upload functionality
-- Drawing tools (freehand, shapes)
+- More drawing tools (shapes, lines, highlighter)
 - Collaborative editing
 - Export to PNG/SVG
 - Undo/Redo functionality
 - Keyboard shortcuts
 - Templates and themes
+- Touch/tablet support
 
 ## License
 

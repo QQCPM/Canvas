@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Type, Square, Image, Link, GitBranch, Move, ZoomIn, ZoomOut, X, Minus } from 'lucide-react';
+import { Plus, Type, Square, Image, Link, GitBranch, Move, ZoomIn, ZoomOut, X, Minus, Pen, Eraser, Download } from 'lucide-react';
 
 const InfiniteCanvas = () => {
   const [elements, setElements] = useState([
-    { id: 1, type: 'sticky', x: 100, y: 100, content: 'Start', color: 'bg-purple-400' },
-    { id: 2, type: 'sticky', x: 300, y: 100, content: 'Stop', color: 'bg-green-400' },
-    { id: 3, type: 'sticky', x: 500, y: 100, content: 'Continue', color: 'bg-orange-400' },
+    { id: 1, type: 'sticky', x: 100, y: 100, width: 150, height: 150, content: 'Start', color: 'bg-purple-400', drawing: null },
+    { id: 2, type: 'sticky', x: 300, y: 100, width: 150, height: 150, content: 'Stop', color: 'bg-green-400', drawing: null },
+    { id: 3, type: 'sticky', x: 500, y: 100, width: 150, height: 150, content: 'Continue', color: 'bg-orange-400', drawing: null },
   ]);
 
   const [connections, setConnections] = useState([]);
@@ -19,6 +19,16 @@ const InfiniteCanvas = () => {
   const [editingElement, setEditingElement] = useState(null);
   const [draggingElement, setDraggingElement] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [resizingElement, setResizingElement] = useState(null);
+  const [resizeDirection, setResizeDirection] = useState(null);
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
+  // Drawing state
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawingTool, setDrawingTool] = useState('pen');
+  const [drawingColor, setDrawingColor] = useState('#000000');
+  const drawingCanvasRef = useRef(null);
+  const drawingContextRef = useRef(null);
 
   const canvasRef = useRef(null);
   const nextId = useRef(4);
@@ -55,12 +65,19 @@ const InfiniteCanvas = () => {
           type: selectedTool,
           x,
           y,
+          width: selectedTool === 'sticky' ? 150 :
+                 selectedTool === 'mindmap' ? 150 :
+                 selectedTool === 'image' ? 200 : 200,
+          height: selectedTool === 'sticky' ? 150 :
+                  selectedTool === 'mindmap' ? 150 :
+                  selectedTool === 'image' ? 200 : 100,
           content: selectedTool === 'sticky' ? 'New note' :
                    selectedTool === 'text' ? 'Type here...' :
                    selectedTool === 'link' ? 'https://example.com' :
                    selectedTool === 'mindmap' ? 'Central Idea' :
                    'New element',
           color: selectedTool === 'sticky' ? stickyColors[Math.floor(Math.random() * stickyColors.length)] : 'bg-white',
+          drawing: null,
         };
 
         setElements([...elements, newElement]);
@@ -90,15 +107,64 @@ const InfiniteCanvas = () => {
         el.id === draggingElement.id ? { ...el, x: newX, y: newY } : el
       ));
     }
+
+    if (resizingElement) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left - pan.x) / zoom;
+      const mouseY = (e.clientY - rect.top - pan.y) / zoom;
+
+      const deltaX = mouseX - resizeStart.x;
+      const deltaY = mouseY - resizeStart.y;
+
+      setElements(elements.map(el => {
+        if (el.id === resizingElement.id) {
+          let newWidth = el.width;
+          let newHeight = el.height;
+          let newX = el.x;
+          let newY = el.y;
+
+          if (resizeDirection.includes('e')) {
+            newWidth = Math.max(50, resizeStart.width + deltaX);
+          }
+          if (resizeDirection.includes('w')) {
+            const widthChange = resizeStart.width - deltaX;
+            if (widthChange >= 50) {
+              newWidth = widthChange;
+              newX = resizeStart.elementX + deltaX;
+            }
+          }
+          if (resizeDirection.includes('s')) {
+            newHeight = Math.max(50, resizeStart.height + deltaY);
+          }
+          if (resizeDirection.includes('n')) {
+            const heightChange = resizeStart.height - deltaY;
+            if (heightChange >= 50) {
+              newHeight = heightChange;
+              newY = resizeStart.elementY + deltaY;
+            }
+          }
+
+          return { ...el, x: newX, y: newY, width: newWidth, height: newHeight };
+        }
+        return el;
+      }));
+    }
   };
 
   const handleCanvasMouseUp = () => {
     setIsPanning(false);
     setDraggingElement(null);
+    setResizingElement(null);
+    setResizeDirection(null);
   };
 
   const handleElementClick = (e, element) => {
     e.stopPropagation();
+
+    // Prevent opening modal if we just finished dragging
+    if (draggingElement) {
+      return;
+    }
 
     if (selectedTool === 'connector') {
       if (!connectingFrom) {
@@ -115,6 +181,9 @@ const InfiniteCanvas = () => {
         setConnectingFrom(null);
         setSelectedTool(null);
       }
+    } else if (!resizingElement) {
+      // Single click opens full screen modal
+      setEditingElement(element);
     }
   };
 
@@ -123,6 +192,12 @@ const InfiniteCanvas = () => {
 
     if (selectedTool === 'connector') {
       return; // Let handleElementClick handle connector logic
+    }
+
+    // Check if clicking on resize handle
+    const isResizeHandle = e.target.classList.contains('resize-handle');
+    if (isResizeHandle) {
+      return; // Resize handle has its own handler
     }
 
     const rect = e.currentTarget.getBoundingClientRect();
@@ -134,11 +209,23 @@ const InfiniteCanvas = () => {
     setDraggingElement(element);
   };
 
-  const handleElementDoubleClick = (e, element) => {
+  const handleResizeMouseDown = (e, element, direction) => {
     e.stopPropagation();
-    if (selectedTool !== 'connector') {
-      setEditingElement(element);
-    }
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left - pan.x) / zoom;
+    const mouseY = (e.clientY - rect.top - pan.y) / zoom;
+
+    setResizingElement(element);
+    setResizeDirection(direction);
+    setResizeStart({
+      x: mouseX,
+      y: mouseY,
+      width: element.width,
+      height: element.height,
+      elementX: element.x,
+      elementY: element.y,
+    });
   };
 
   const handleZoomIn = () => {
@@ -166,17 +253,103 @@ const InfiniteCanvas = () => {
   };
 
   const getElementCenter = (element) => {
-    const width = element.type === 'sticky' ? 150 :
-                  element.type === 'mindmap' ? 150 :
-                  element.type === 'image' ? 200 : 200;
-    const height = element.type === 'sticky' ? 150 :
-                   element.type === 'mindmap' ? 150 :
-                   element.type === 'image' ? 200 : 80;
-
     return {
-      x: element.x + width / 2,
-      y: element.y + height / 2,
+      x: element.x + element.width / 2,
+      y: element.y + element.height / 2,
     };
+  };
+
+  // Drawing functions for modal
+  useEffect(() => {
+    if (editingElement && drawingCanvasRef.current) {
+      const canvas = drawingCanvasRef.current;
+      const context = canvas.getContext('2d');
+      drawingContextRef.current = context;
+
+      // Set canvas size
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+
+      // Load existing drawing if any
+      if (editingElement.drawing) {
+        const img = new Image();
+        img.onload = () => {
+          context.drawImage(img, 0, 0);
+        };
+        img.src = editingElement.drawing;
+      } else {
+        // Clear canvas
+        context.fillStyle = 'white';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+  }, [editingElement]);
+
+  const startDrawing = (e) => {
+    if (!drawingContextRef.current) return;
+
+    const rect = drawingCanvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    drawingContextRef.current.beginPath();
+    drawingContextRef.current.moveTo(x, y);
+    setIsDrawing(true);
+  };
+
+  const draw = (e) => {
+    if (!isDrawing || !drawingContextRef.current) return;
+
+    const rect = drawingCanvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const context = drawingContextRef.current;
+
+    if (drawingTool === 'pen') {
+      context.strokeStyle = drawingColor;
+      context.lineWidth = 2;
+      context.lineCap = 'round';
+      context.lineTo(x, y);
+      context.stroke();
+    } else if (drawingTool === 'eraser') {
+      context.strokeStyle = 'white';
+      context.lineWidth = 20;
+      context.lineCap = 'round';
+      context.lineTo(x, y);
+      context.stroke();
+    }
+  };
+
+  const stopDrawing = () => {
+    if (!drawingContextRef.current) return;
+
+    drawingContextRef.current.closePath();
+    setIsDrawing(false);
+
+    // Save drawing to element
+    if (drawingCanvasRef.current) {
+      const drawingData = drawingCanvasRef.current.toDataURL();
+      setElements(elements.map(el =>
+        el.id === editingElement.id ? { ...el, drawing: drawingData } : el
+      ));
+      setEditingElement({ ...editingElement, drawing: drawingData });
+    }
+  };
+
+  const clearDrawing = () => {
+    if (!drawingCanvasRef.current || !drawingContextRef.current) return;
+
+    const canvas = drawingCanvasRef.current;
+    const context = drawingContextRef.current;
+
+    context.fillStyle = 'white';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    setElements(elements.map(el =>
+      el.id === editingElement.id ? { ...el, drawing: null } : el
+    ));
+    setEditingElement({ ...editingElement, drawing: null });
   };
 
   const renderConnections = () => {
@@ -205,6 +378,37 @@ const InfiniteCanvas = () => {
     });
   };
 
+  const renderResizeHandles = (element) => {
+    const handleSize = 8;
+    const handles = ['nw', 'ne', 'sw', 'se'];
+
+    return handles.map(direction => {
+      const style = {
+        position: 'absolute',
+        width: `${handleSize}px`,
+        height: `${handleSize}px`,
+        background: '#3b82f6',
+        border: '1px solid white',
+        borderRadius: '50%',
+        cursor: `${direction}-resize`,
+      };
+
+      if (direction.includes('n')) style.top = '-4px';
+      if (direction.includes('s')) style.bottom = '-4px';
+      if (direction.includes('w')) style.left = '-4px';
+      if (direction.includes('e')) style.right = '-4px';
+
+      return (
+        <div
+          key={direction}
+          className="resize-handle"
+          style={style}
+          onMouseDown={(e) => handleResizeMouseDown(e, element, direction)}
+        />
+      );
+    });
+  };
+
   const renderElement = (element) => {
     const isConnecting = selectedTool === 'connector';
     const isConnectingFrom = connectingFrom && connectingFrom.id === element.id;
@@ -212,23 +416,27 @@ const InfiniteCanvas = () => {
       isConnecting ? 'cursor-pointer hover:ring-4 hover:ring-blue-400' : 'cursor-move hover:scale-105'
     } ${isConnectingFrom ? 'ring-4 ring-blue-500' : ''}`;
 
+    const commonStyle = {
+      left: `${element.x}px`,
+      top: `${element.y}px`,
+      width: `${element.width}px`,
+      height: `${element.height}px`,
+    };
+
     switch (element.type) {
       case 'sticky':
         return (
           <div
             key={element.id}
-            className={`${commonClasses} ${element.color} p-4 min-w-[150px] min-h-[150px] flex items-center justify-center`}
-            style={{
-              left: `${element.x}px`,
-              top: `${element.y}px`,
-            }}
+            className={`${commonClasses} ${element.color} p-4 flex items-center justify-center relative group`}
+            style={commonStyle}
             onMouseDown={(e) => handleElementMouseDown(e, element)}
             onClick={(e) => handleElementClick(e, element)}
-            onDoubleClick={(e) => handleElementDoubleClick(e, element)}
           >
-            <p className="text-center font-medium text-gray-800 break-words max-w-[130px]">
+            <p className="text-center font-medium text-gray-800 break-words overflow-hidden">
               {element.content}
             </p>
+            {renderResizeHandles(element)}
           </div>
         );
 
@@ -236,16 +444,13 @@ const InfiniteCanvas = () => {
         return (
           <div
             key={element.id}
-            className={`${commonClasses} bg-transparent p-2 min-w-[200px]`}
-            style={{
-              left: `${element.x}px`,
-              top: `${element.y}px`,
-            }}
+            className={`${commonClasses} bg-transparent p-2 relative group`}
+            style={commonStyle}
             onMouseDown={(e) => handleElementMouseDown(e, element)}
             onClick={(e) => handleElementClick(e, element)}
-            onDoubleClick={(e) => handleElementDoubleClick(e, element)}
           >
-            <p className="text-gray-800 text-lg">{element.content}</p>
+            <p className="text-gray-800 text-lg overflow-hidden">{element.content}</p>
+            {renderResizeHandles(element)}
           </div>
         );
 
@@ -253,17 +458,14 @@ const InfiniteCanvas = () => {
         return (
           <div
             key={element.id}
-            className={`${commonClasses} bg-blue-50 border-2 border-blue-300 p-3 min-w-[200px]`}
-            style={{
-              left: `${element.x}px`,
-              top: `${element.y}px`,
-            }}
+            className={`${commonClasses} bg-blue-50 border-2 border-blue-300 p-3 relative group`}
+            style={commonStyle}
             onMouseDown={(e) => handleElementMouseDown(e, element)}
             onClick={(e) => handleElementClick(e, element)}
-            onDoubleClick={(e) => handleElementDoubleClick(e, element)}
           >
             <Link className="w-5 h-5 text-blue-600 mb-1" />
-            <p className="text-blue-600 text-sm break-all">{element.content}</p>
+            <p className="text-blue-600 text-sm break-all overflow-hidden">{element.content}</p>
+            {renderResizeHandles(element)}
           </div>
         );
 
@@ -271,18 +473,15 @@ const InfiniteCanvas = () => {
         return (
           <div
             key={element.id}
-            className={`${commonClasses} bg-gradient-to-br from-purple-100 to-pink-100 border-2 border-purple-300 p-4 rounded-full w-[150px] h-[150px] flex items-center justify-center`}
-            style={{
-              left: `${element.x}px`,
-              top: `${element.y}px`,
-            }}
+            className={`${commonClasses} bg-gradient-to-br from-purple-100 to-pink-100 border-2 border-purple-300 p-4 rounded-full flex items-center justify-center relative group`}
+            style={commonStyle}
             onMouseDown={(e) => handleElementMouseDown(e, element)}
             onClick={(e) => handleElementClick(e, element)}
-            onDoubleClick={(e) => handleElementDoubleClick(e, element)}
           >
-            <p className="text-center font-semibold text-purple-800 text-sm">
+            <p className="text-center font-semibold text-purple-800 text-sm overflow-hidden">
               {element.content}
             </p>
+            {renderResizeHandles(element)}
           </div>
         );
 
@@ -290,19 +489,16 @@ const InfiniteCanvas = () => {
         return (
           <div
             key={element.id}
-            className={`${commonClasses} bg-gray-100 border-2 border-gray-300 p-4 w-[200px] h-[200px] flex items-center justify-center`}
-            style={{
-              left: `${element.x}px`,
-              top: `${element.y}px`,
-            }}
+            className={`${commonClasses} bg-gray-100 border-2 border-gray-300 p-4 flex items-center justify-center relative group`}
+            style={commonStyle}
             onMouseDown={(e) => handleElementMouseDown(e, element)}
             onClick={(e) => handleElementClick(e, element)}
-            onDoubleClick={(e) => handleElementDoubleClick(e, element)}
           >
             <div className="text-center">
               <Image className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">Click to upload</p>
+              <p className="text-gray-500 text-sm">Click to edit</p>
             </div>
+            {renderResizeHandles(element)}
           </div>
         );
 
@@ -412,78 +608,134 @@ const InfiniteCanvas = () => {
         </div>
       </div>
 
-      {/* Edit Modal */}
+      {/* Full Screen Edit Modal */}
       {editingElement && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-[700px] max-h-[85vh] flex flex-col animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-800">
-                Edit {editingElement.type.charAt(0).toUpperCase() + editingElement.type.slice(1)}
-              </h2>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-30 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-[95vw] h-[95vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-800">
+                  {editingElement.type.charAt(0).toUpperCase() + editingElement.type.slice(1)}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">Click to type, draw, and customize</p>
+              </div>
               <button
                 onClick={() => setEditingElement(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-3 hover:bg-white rounded-xl transition-all hover:shadow-md"
+                title="Close (Esc)"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="flex-1 p-6 overflow-y-auto">
-              <textarea
-                value={editingElement.content}
-                onChange={(e) => updateElementContent(e.target.value)}
-                className="w-full h-64 p-4 border-2 border-gray-300 rounded-xl resize-none focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-lg transition-all"
-                placeholder="Type your content here..."
-                autoFocus
-              />
+            {/* Main Content Area */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* Left Panel - Text Editor */}
+              <div className="w-1/2 p-6 flex flex-col border-r border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-700">Text Content</h3>
+                  {editingElement.type === 'sticky' && (
+                    <div className="flex gap-2">
+                      {stickyColors.map(color => (
+                        <button
+                          key={color}
+                          onClick={() => {
+                            setElements(elements.map(el =>
+                              el.id === editingElement.id ? { ...el, color } : el
+                            ));
+                            setEditingElement({ ...editingElement, color });
+                          }}
+                          className={`w-8 h-8 ${color} rounded-lg border-2 ${
+                            editingElement.color === color ? 'border-gray-800 ring-2 ring-gray-400' : 'border-gray-300'
+                          } hover:scale-110 transition-transform`}
+                          title="Change color"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <textarea
+                  value={editingElement.content}
+                  onChange={(e) => updateElementContent(e.target.value)}
+                  className="flex-1 p-6 border-2 border-gray-300 rounded-2xl resize-none focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 text-xl transition-all font-sans"
+                  placeholder="Type your content here..."
+                  autoFocus
+                />
+              </div>
 
-              {editingElement.type === 'sticky' && (
-                <div className="mt-6">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Choose color:</p>
-                  <div className="flex gap-3">
-                    {stickyColors.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => {
-                          setElements(elements.map(el =>
-                            el.id === editingElement.id ? { ...el, color } : el
-                          ));
-                          setEditingElement({ ...editingElement, color });
-                        }}
-                        className={`w-12 h-12 ${color} rounded-xl border-3 ${
-                          editingElement.color === color ? 'border-gray-800 ring-4 ring-gray-300' : 'border-gray-200'
-                        } hover:scale-110 transition-transform shadow-md`}
-                      />
-                    ))}
+              {/* Right Panel - Drawing Canvas */}
+              <div className="w-1/2 p-6 flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-700">Drawing Area</h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setDrawingTool('pen')}
+                      className={`p-2 rounded-lg transition-all ${
+                        drawingTool === 'pen'
+                          ? 'bg-blue-500 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                      title="Pen"
+                    >
+                      <Pen className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setDrawingTool('eraser')}
+                      className={`p-2 rounded-lg transition-all ${
+                        drawingTool === 'eraser'
+                          ? 'bg-blue-500 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                      title="Eraser"
+                    >
+                      <Eraser className="w-5 h-5" />
+                    </button>
+                    <input
+                      type="color"
+                      value={drawingColor}
+                      onChange={(e) => setDrawingColor(e.target.value)}
+                      className="w-10 h-10 rounded-lg cursor-pointer border-2 border-gray-300"
+                      title="Drawing color"
+                    />
+                    <button
+                      onClick={clearDrawing}
+                      className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium ml-2"
+                    >
+                      Clear
+                    </button>
                   </div>
                 </div>
-              )}
-
-              {editingElement.type === 'image' && (
-                <div className="mt-6">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Upload Image:</p>
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer">
-                    <Image className="w-16 h-16 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600">Click or drag to upload image</p>
-                    <p className="text-gray-400 text-sm mt-1">(Prototype - Upload feature coming soon)</p>
-                  </div>
-                </div>
-              )}
+                <canvas
+                  ref={drawingCanvasRef}
+                  className="flex-1 border-2 border-gray-300 rounded-2xl cursor-crosshair bg-white"
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                />
+                <p className="text-sm text-gray-500 mt-2">
+                  Use your mouse to draw on the canvas. Drawings are saved automatically.
+                </p>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+            {/* Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
               <button
                 onClick={deleteElement}
-                className="px-5 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium shadow-sm hover:shadow-md"
+                className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-medium shadow-md hover:shadow-lg"
               >
-                Delete
+                Delete Element
               </button>
-              <button
-                onClick={() => setEditingElement(null)}
-                className="px-6 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-sm hover:shadow-md"
-              >
-                Done
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setEditingElement(null)}
+                  className="px-8 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium shadow-md hover:shadow-lg"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -505,7 +757,7 @@ const InfiniteCanvas = () => {
           <div className="bg-white rounded-lg shadow-lg p-4 max-w-md">
             <p className="text-sm text-gray-700">
               <strong>Quick Guide:</strong> Select a tool and click canvas to create.
-              Double-click to edit. Drag to move. Use connector to link elements!
+              Click box to open full screen editor. Drag to move. Resize with corner handles!
             </p>
           </div>
         )}

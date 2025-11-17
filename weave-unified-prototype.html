@@ -347,15 +347,10 @@
             border-radius: 24px;
             padding: 8px 24px;
             min-width: 160px;
-            max-width: 400px;
-            opacity: 0;
-            transition: opacity 0.2s;
+            max-width: none;
+            opacity: 1;
             z-index: 5;
             white-space: nowrap;
-        }
-
-        .canvas-element:hover .block-label {
-            opacity: 1;
         }
 
         .block-label input {
@@ -366,7 +361,8 @@
             text-align: center;
             font-size: 14px;
             font-weight: 600;
-            width: 100%;
+            width: auto;
+            min-width: 100px;
             padding: 0;
         }
 
@@ -796,45 +792,51 @@
 
         // Zoom functions
         function zoomIn() {
+            const oldZoom = zoomScale;
             zoomScale = Math.min(zoomScale + 0.1, 2.0);
-            applyZoom();
+            applyZoom(lastMouseX, lastMouseY, oldZoom);
         }
 
         function zoomOut() {
+            const oldZoom = zoomScale;
             zoomScale = Math.max(zoomScale - 0.1, 0.5);
-            applyZoom();
+            applyZoom(lastMouseX, lastMouseY, oldZoom);
         }
 
         function resetZoom() {
+            const oldZoom = zoomScale;
             zoomScale = 1.0;
-            applyZoom();
+            applyZoom(lastMouseX, lastMouseY, oldZoom);
         }
 
-        function applyZoom(mouseX, mouseY) {
+        function applyZoom(mouseX, mouseY, oldZoom) {
             const viewport = document.getElementById('canvasViewport');
             const elementsContainer = document.getElementById('canvasElements');
             const svg = document.getElementById('connectionSvg');
 
-            // If mouse position provided, zoom towards that point
-            if (mouseX !== undefined && mouseY !== undefined) {
+            // Apply the new zoom scale
+            elementsContainer.style.transform = `scale(${zoomScale})`;
+            svg.style.transform = `scale(${zoomScale})`;
+
+            // If mouse position provided, adjust scroll to zoom towards cursor
+            if (mouseX !== undefined && mouseY !== undefined && oldZoom !== undefined) {
                 const rect = viewport.getBoundingClientRect();
+
+                // Mouse position relative to viewport
                 const mouseRelX = mouseX - rect.left;
                 const mouseRelY = mouseY - rect.top;
 
-                // Calculate the canvas point under the mouse before zoom
-                const canvasX = (viewport.scrollLeft + mouseRelX) / zoomScale;
-                const canvasY = (viewport.scrollTop + mouseRelY) / zoomScale;
+                // Calculate the canvas point under mouse BEFORE zoom (using old zoom)
+                const canvasPointX = (viewport.scrollLeft + mouseRelX) / oldZoom;
+                const canvasPointY = (viewport.scrollTop + mouseRelY) / oldZoom;
 
-                // Apply zoom
-                elementsContainer.style.transform = `scale(${zoomScale})`;
-                svg.style.transform = `scale(${zoomScale})`;
+                // Calculate where that point should be AFTER zoom to stay under cursor
+                const newScrollLeft = canvasPointX * zoomScale - mouseRelX;
+                const newScrollTop = canvasPointY * zoomScale - mouseRelY;
 
-                // Adjust scroll to keep the same point under the mouse
-                viewport.scrollLeft = canvasX * zoomScale - mouseRelX;
-                viewport.scrollTop = canvasY * zoomScale - mouseRelY;
-            } else {
-                elementsContainer.style.transform = `scale(${zoomScale})`;
-                svg.style.transform = `scale(${zoomScale})`;
+                // Apply the new scroll position
+                viewport.scrollLeft = newScrollLeft;
+                viewport.scrollTop = newScrollTop;
             }
 
             document.getElementById('zoomLevel').textContent = Math.round(zoomScale * 100) + '%';
@@ -917,7 +919,26 @@
                 // Add glassmorphic label bar
                 const labelBar = document.createElement('div');
                 labelBar.className = 'block-label';
-                labelBar.innerHTML = `<input type="text" value="${element.label || ''}" placeholder="Label..." onchange="updateLabel(${element.id}, this.value)" onclick="event.stopPropagation()" />`;
+                const labelInput = document.createElement('input');
+                labelInput.type = 'text';
+                labelInput.value = element.label || '';
+                labelInput.placeholder = 'Label...';
+                labelInput.onclick = (e) => e.stopPropagation();
+                labelInput.onchange = (e) => updateLabel(element.id, e.target.value);
+
+                // Auto-resize input to fit text
+                const resizeInput = () => {
+                    const text = labelInput.value || labelInput.placeholder;
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    context.font = '600 14px Inter';
+                    const width = context.measureText(text).width;
+                    labelInput.style.width = Math.max(100, width + 20) + 'px';
+                };
+                labelInput.oninput = resizeInput;
+                resizeInput(); // Initial size
+
+                labelBar.appendChild(labelInput);
                 div.appendChild(labelBar);
 
                 // Add resize handles
@@ -1083,17 +1104,12 @@
                     const fromEdge = getBoxEdgePoint(fromEl, toCenterX, toCenterY);
                     const toEdge = getBoxEdgePoint(toEl, fromCenterX, fromCenterY);
 
-                    // Apply zoom scale
-                    const fromX = fromEdge.x * zoomScale;
-                    const fromY = fromEdge.y * zoomScale;
-                    const toX = toEdge.x * zoomScale;
-                    const toY = toEdge.y * zoomScale;
-
+                    // Use raw coordinates - SVG is already scaled, don't double-scale
                     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    line.setAttribute('x1', fromX);
-                    line.setAttribute('y1', fromY);
-                    line.setAttribute('x2', toX);
-                    line.setAttribute('y2', toY);
+                    line.setAttribute('x1', fromEdge.x);
+                    line.setAttribute('y1', fromEdge.y);
+                    line.setAttribute('x2', toEdge.x);
+                    line.setAttribute('y2', toEdge.y);
                     line.setAttribute('stroke', '#58a6ff');
                     line.setAttribute('stroke-width', '2');
                     line.setAttribute('marker-end', 'url(#arrowhead)');
@@ -1443,7 +1459,7 @@
         canvasViewport.addEventListener('wheel', (e) => {
             e.preventDefault();
 
-            // Store current zoom for calculation
+            // Store current zoom BEFORE changing it
             const oldZoom = zoomScale;
 
             // Determine zoom direction
@@ -1452,8 +1468,8 @@
 
             if (newZoom !== zoomScale) {
                 zoomScale = newZoom;
-                // Zoom towards the mouse cursor position
-                applyZoom(e.clientX, e.clientY);
+                // Zoom towards the mouse cursor position, using OLD zoom for calculation
+                applyZoom(e.clientX, e.clientY, oldZoom);
             }
         }, { passive: false });
 

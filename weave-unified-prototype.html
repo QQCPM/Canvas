@@ -337,19 +337,21 @@
         /* Glassmorphic Label Bar */
         .block-label {
             position: absolute;
-            top: -28px;
+            top: -40px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(22, 27, 34, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(88, 166, 255, 0.2);
-            border-radius: 20px;
-            padding: 4px 16px;
-            min-width: 120px;
+            background: rgba(22, 27, 34, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            border-radius: 24px;
+            padding: 8px 24px;
+            min-width: 160px;
+            max-width: 400px;
             opacity: 0;
             transition: opacity 0.2s;
             z-index: 5;
+            white-space: nowrap;
         }
 
         .canvas-element:hover .block-label {
@@ -362,8 +364,8 @@
             outline: none;
             color: #ffffff;
             text-align: center;
-            font-size: 12px;
-            font-weight: 500;
+            font-size: 14px;
+            font-weight: 600;
             width: 100%;
             padding: 0;
         }
@@ -690,6 +692,8 @@
         let panStartY = 0;
         let panScrollLeft = 0;
         let panScrollTop = 0;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
 
         function switchMode(mode) {
             currentMode = mode;
@@ -806,11 +810,33 @@
             applyZoom();
         }
 
-        function applyZoom() {
+        function applyZoom(mouseX, mouseY) {
+            const viewport = document.getElementById('canvasViewport');
             const elementsContainer = document.getElementById('canvasElements');
             const svg = document.getElementById('connectionSvg');
-            elementsContainer.style.transform = `scale(${zoomScale})`;
-            svg.style.transform = `scale(${zoomScale})`;
+
+            // If mouse position provided, zoom towards that point
+            if (mouseX !== undefined && mouseY !== undefined) {
+                const rect = viewport.getBoundingClientRect();
+                const mouseRelX = mouseX - rect.left;
+                const mouseRelY = mouseY - rect.top;
+
+                // Calculate the canvas point under the mouse before zoom
+                const canvasX = (viewport.scrollLeft + mouseRelX) / zoomScale;
+                const canvasY = (viewport.scrollTop + mouseRelY) / zoomScale;
+
+                // Apply zoom
+                elementsContainer.style.transform = `scale(${zoomScale})`;
+                svg.style.transform = `scale(${zoomScale})`;
+
+                // Adjust scroll to keep the same point under the mouse
+                viewport.scrollLeft = canvasX * zoomScale - mouseRelX;
+                viewport.scrollTop = canvasY * zoomScale - mouseRelY;
+            } else {
+                elementsContainer.style.transform = `scale(${zoomScale})`;
+                svg.style.transform = `scale(${zoomScale})`;
+            }
+
             document.getElementById('zoomLevel').textContent = Math.round(zoomScale * 100) + '%';
             renderConnections();
         }
@@ -963,6 +989,9 @@
 
                     div.style.left = element.x + 'px';
                     div.style.top = element.y + 'px';
+
+                    // Update connection lines in real-time
+                    renderConnections();
                 });
 
                 document.addEventListener('mouseup', () => {
@@ -998,6 +1027,40 @@
             document.addEventListener('mouseup', stopResize);
         }
 
+        // Calculate intersection point of line with rectangle edge
+        function getBoxEdgePoint(box, targetX, targetY) {
+            const centerX = box.x + box.width / 2;
+            const centerY = box.y + box.height / 2;
+
+            // Calculate angle from box center to target
+            const dx = targetX - centerX;
+            const dy = targetY - centerY;
+
+            // Calculate intersection with box edges
+            const halfWidth = box.width / 2;
+            const halfHeight = box.height / 2;
+
+            // Handle edge cases
+            if (dx === 0 && dy === 0) {
+                return { x: centerX, y: centerY };
+            }
+
+            // Calculate intersection with each edge and find the closest valid one
+            let x, y;
+
+            if (Math.abs(dx) / halfWidth > Math.abs(dy) / halfHeight) {
+                // Intersection with left or right edge
+                x = centerX + (dx > 0 ? halfWidth : -halfWidth);
+                y = centerY + (dy / dx) * (x - centerX);
+            } else {
+                // Intersection with top or bottom edge
+                y = centerY + (dy > 0 ? halfHeight : -halfHeight);
+                x = centerX + (dx / dy) * (y - centerY);
+            }
+
+            return { x, y };
+        }
+
         function renderConnections() {
             const svg = document.getElementById('connectionSvg');
             if (!svg) return;
@@ -1010,10 +1073,21 @@
                 const toEl = canvasElements.find(el => el.id === conn.to);
 
                 if (fromEl && toEl) {
-                    const fromX = (fromEl.x + fromEl.width / 2) * zoomScale;
-                    const fromY = (fromEl.y + fromEl.height / 2) * zoomScale;
-                    const toX = (toEl.x + toEl.width / 2) * zoomScale;
-                    const toY = (toEl.y + toEl.height / 2) * zoomScale;
+                    // Get centers
+                    const fromCenterX = fromEl.x + fromEl.width / 2;
+                    const fromCenterY = fromEl.y + fromEl.height / 2;
+                    const toCenterX = toEl.x + toEl.width / 2;
+                    const toCenterY = toEl.y + toEl.height / 2;
+
+                    // Calculate edge points
+                    const fromEdge = getBoxEdgePoint(fromEl, toCenterX, toCenterY);
+                    const toEdge = getBoxEdgePoint(toEl, fromCenterX, fromCenterY);
+
+                    // Apply zoom scale
+                    const fromX = fromEdge.x * zoomScale;
+                    const fromY = fromEdge.y * zoomScale;
+                    const toX = toEdge.x * zoomScale;
+                    const toY = toEdge.y * zoomScale;
 
                     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                     line.setAttribute('x1', fromX);
@@ -1357,9 +1431,20 @@
             }
         });
 
-        // Mouse wheel zoom functionality
+        // Track mouse position for zoom
+        canvasViewport.addEventListener('mousemove', (e) => {
+            if (!isPanning) {
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        });
+
+        // Mouse wheel zoom functionality - zoom towards cursor
         canvasViewport.addEventListener('wheel', (e) => {
             e.preventDefault();
+
+            // Store current zoom for calculation
+            const oldZoom = zoomScale;
 
             // Determine zoom direction
             const delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -1367,7 +1452,8 @@
 
             if (newZoom !== zoomScale) {
                 zoomScale = newZoom;
-                applyZoom();
+                // Zoom towards the mouse cursor position
+                applyZoom(e.clientX, e.clientY);
             }
         }, { passive: false });
 

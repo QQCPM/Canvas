@@ -476,12 +476,12 @@
                                 <path d="M9 11V6a2 2 0 0 1 4 0v5M9 11a2 2 0 1 1-4 0V9M9 11h4m0 0a2 2 0 1 0 4 0V6M13 16v-5m0 5a2 2 0 0 0 4 0v-4m-4 4H9m8-9V5a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v6"></path>
                             </svg>
                         </button>
-                        <button class="canvas-tool-btn" onclick="selectTool('arrow')" title="Arrow - Select">
+                        <button class="canvas-tool-btn" onclick="selectTool('cursor')" title="Cursor - Select & Edit">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
                             </svg>
                         </button>
-                        <button class="canvas-tool-btn" onclick="selectTool('connector')" title="Connector - Draw Lines">
+                        <button class="canvas-tool-btn" onclick="selectTool('arrow')" title="Arrow - Connect Boxes">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
                                 <polyline points="15 8 19 12 15 16"></polyline>
@@ -903,16 +903,16 @@
                     div.appendChild(handle);
                 });
 
-                // Click to open modal or connect (arrow/connector modes)
+                // Click to open modal or connect (cursor/arrow modes)
                 div.addEventListener('click', (e) => {
                     if (e.target.classList.contains('resize-handle')) return;
                     if (e.target.tagName === 'INPUT') return;
 
-                    if (selectedTool === 'arrow') {
-                        // Arrow tool opens modal
+                    if (selectedTool === 'cursor') {
+                        // Cursor tool opens modal
                         openEditModal(element);
-                    } else if (selectedTool === 'connector') {
-                        // Connector tool creates connections
+                    } else if (selectedTool === 'arrow') {
+                        // Arrow tool creates connections
                         if (connectingFrom) {
                             // Create connection
                             if (connectingFrom.id !== element.id) {
@@ -1166,7 +1166,7 @@
                                 <line x1="10" y1="13" x2="6.5" y2="16.5"></line>
                             </svg>
                             <input type="text" id="mindmapContent" value="${element.content}" placeholder="Central Idea..." style="width: 100%; padding: 24px; border: 2px solid #d8b4fe; border-radius: 16px; text-align: center; font-size: 32px; font-weight: 700;" />
-                            <p style="color: #6b7280; margin-top: 16px;">Use arrow tool to connect to other blocks</p>
+                            <p style="color: #6b7280; margin-top: 16px;">Use the arrow tool (connector) to link to other blocks</p>
                         </div>
                     </div>
                 `;
@@ -1308,7 +1308,7 @@
         // Canvas click to create elements
         document.getElementById('infinityCanvas').addEventListener('click', (e) => {
             if (e.target.id === 'infinityCanvas' || e.target.id === 'canvasElements' || e.target.id === 'connectionSvg') {
-                if (selectedTool && selectedTool !== 'hand' && selectedTool !== 'arrow' && selectedTool !== 'connector') {
+                if (selectedTool && selectedTool !== 'hand' && selectedTool !== 'cursor' && selectedTool !== 'arrow') {
                     const x = e.offsetX;
                     const y = e.offsetY;
                     createElement(selectedTool, x, y);
@@ -1356,6 +1356,20 @@
                 canvasViewport.style.cursor = '';
             }
         });
+
+        // Mouse wheel zoom functionality
+        canvasViewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+
+            // Determine zoom direction
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            const newZoom = Math.max(0.5, Math.min(2.0, zoomScale + delta));
+
+            if (newZoom !== zoomScale) {
+                zoomScale = newZoom;
+                applyZoom();
+            }
+        }, { passive: false });
 
         // Drag and drop from Note mode to Canvas
         let draggedNoteData = null;

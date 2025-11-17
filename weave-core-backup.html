@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weave Core - Note Taking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a5568;
+        }
+
+        /* Text Block Styles */
+        .canvas-block {
+            margin: 8px 0;
+            border-radius: 8px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .canvas-block:hover .block-handle {
+            opacity: 1;
+        }
+
+        .block-handle {
+            position: absolute;
+            left: -24px;
+            top: 4px;
+            width: 20px;
+            height: 20px;
+            opacity: 0;
+            cursor: grab;
+            color: #6e7681;
+            transition: opacity 0.2s;
+        }
+
+        .block-handle:hover {
+            color: #c9d1d9;
+        }
+
+        /* Text Block Content */
+        .text-block {
+            padding: 4px 8px;
+            min-height: 32px;
+        }
+
+        .text-block input,
+        .text-block textarea {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #c9d1d9;
+            width: 100%;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .text-block input::placeholder,
+        .text-block textarea::placeholder {
+            color: #484f58;
+        }
+
+        .text-block.heading-1 input {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .text-block.heading-2 input {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        /* Note Sidebar */
+        .note-folder {
+            margin-bottom: 4px;
+        }
+
+        .note-tree-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            margin: 2px 0;
+        }
+
+        .note-tree-item:hover {
+            background: #161b22;
+        }
+
+        .note-tree-item.active {
+            background: #161b22;
+            color: #ffffff;
+        }
+
+        .note-chevron {
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 12px;
+            color: #6e7681;
+            min-width: 16px;
+        }
+
+        .note-chevron.expanded {
+            transform: rotate(90deg);
+        }
+
+        .note-icon {
+            font-size: 16px;
+        }
+
+        .note-title {
+            font-size: 14px;
+            color: #c9d1d9;
+        }
+
+        .sub-notes {
+            display: none;
+            margin-left: 16px;
+            border-left: 1px solid rgba(48, 54, 61, 0.4);
+        }
+
+        .sub-notes.expanded {
+            display: block;
+        }
+
+        /* AI Input (Sidebar) */
+        .ai-input-unified {
+            background: rgba(22, 27, 34, 0.65);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(48, 54, 61, 0.3);
+            border-radius: 12px;
+            margin: 16px;
+            padding: 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex-shrink: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .ai-input-unified:hover {
+            border-color: rgba(48, 54, 61, 0.5);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-context {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #8b949e;
+        }
+
+        .context-icon {
+            font-size: 14px;
+            color: #58a6ff;
+        }
+
+        .context-text {
+            flex: 1;
+            font-weight: 500;
+            color: #c9d1d9;
+        }
+
+        .context-action {
+            background: none;
+            border: none;
+            color: #6e7681;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .context-action:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .input-field {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #ffffff;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            font-family: 'Inter', sans-serif;
+            padding: 0;
+            min-height: 40px;
+        }
+
+        .input-field::placeholder {
+            color: #6e7681;
+        }
+
+        .input-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .mode-selector {
+            background: rgba(48, 54, 61, 0.4);
+            border: none;
+            color: #c9d1d9;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .mode-selector:hover {
+            background: rgba(48, 54, 61, 0.6);
+            color: #ffffff;
+        }
+
+        .mode-selector-text {
+            background: transparent;
+            border: none;
+            color: #8b949e;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .mode-selector-text:hover {
+            color: #c9d1d9;
+        }
+
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: #6e7681;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+
+        .action-btn:hover {
+            color: #58a6ff;
+            background: rgba(88, 166, 255, 0.1);
+            transform: scale(1.1);
+        }
+
+        .send-btn {
+            background: #58a6ff;
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 6px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+
+        .send-btn:hover {
+            background: #4a93e0;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* AI Conversation Area */
+        .ai-message-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            color: #6e7681;
+            margin-bottom: 6px;
+            display: inline-block;
+        }
+
+        .ai-message-text {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #c9d1d9;
+        }
+
+        .ai-conversation-flow {
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .chat-bubble {
+            animation: slideInUp 0.4s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Tab Content System */
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tab-button {
+            padding: 12px 16px;
+            border-bottom: 2px solid transparent;
+            color: #8b949e;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+        }
+
+        .tab-button:hover {
+            color: #c9d1d9;
+        }
+
+        .tab-button.active {
+            color: #ffffff;
+            border-bottom-color: #58a6ff;
+        }
+
+        /* Status Indicator */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #6e7681;
+            padding: 6px 0;
+        }
+
+        .status-indicator.success {
+            color: #3fb950;
+        }
+
+        /* Knowledge Search Bar */
+        .knowledge-search {
+            background: rgba(22, 27, 34, 0.6);
+            border: 1px solid rgba(48, 54, 61, 0.4);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .knowledge-search:focus-within {
+            border-color: rgba(88, 166, 255, 0.5);
+            background: rgba(22, 27, 34, 0.8);
+        }
+
+        .knowledge-search input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #c9d1d9;
+            font-size: 13px;
+            width: 100%;
+        }
+
+        .knowledge-search input::placeholder {
+            color: #6e7681;
+        }
+
+        .search-icon {
+            font-size: 16px;
+        }
+
+        /* Code/Diff Blocks */
+        .diff-add {
+            background-color: rgba(46, 160, 67, 0.15);
+            border-left: 2px solid rgba(46, 160, 67, 0.4);
+            padding: 4px 8px;
+            margin: 2px 0;
+        }
+
+        .diff-del {
+            background-color: rgba(248, 81, 73, 0.1);
+            border-left: 2px solid rgba(248, 81, 73, 0.4);
+            text-decoration: line-through;
+            padding: 4px 8px;
+            margin: 2px 0;
+        }
+
+        .code-block-container {
+            background: rgba(22, 27, 34, 0.7);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(48, 54, 61, 0.4);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            margin: 12px 0;
+        }
+
+        .code-block-container:hover {
+            border-color: rgba(88, 166, 255, 0.3);
+            box-shadow: 0 6px 32px rgba(0, 0, 0, 0.25);
+        }
+
+        .code-block-header {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(48, 54, 61, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        .code-block-title {
+            font-size: 12px;
+            font-weight: 500;
+            color: #c9d1d9;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .code-block-stats {
+            display: flex;
+            gap: 12px;
+            font-size: 11px;
+        }
+
+        .stat-add {
+            color: #3fb950;
+            font-weight: 600;
+        }
+
+        .stat-del {
+            color: #f85149;
+            font-weight: 600;
+        }
+
+        .code-block-content {
+            padding: 12px 14px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .code-block-footer {
+            padding: 8px 14px;
+            border-top: 1px solid rgba(48, 54, 61, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .code-block-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .code-action-btn {
+            background: none;
+            border: none;
+            color: #6e7681;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+
+        .code-action-btn:hover {
+            color: #58a6ff;
+            background: rgba(88, 166, 255, 0.1);
+        }
+
+        .apply-btn {
+            background: transparent;
+            color: #8b949e;
+            border: 1px solid #30363d;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .apply-btn:hover {
+            background: rgba(46, 160, 67, 0.1);
+            color: #3fb950;
+            border-color: #3fb950;
+        }
+
+        .reject-btn {
+            background: transparent;
+            color: #8b949e;
+            border: 1px solid #30363d;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reject-btn:hover {
+            background: rgba(248, 81, 73, 0.1);
+            color: #f85149;
+            border-color: #f85149;
+        }
+
+        /* MCP Tools & Skills */
+        .mcp-tool-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: rgba(22, 27, 34, 0.6);
+            border: 1px solid rgba(48, 54, 61, 0.4);
+            transition: all 0.2s;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .mcp-tool-item:hover {
+            background: rgba(22, 27, 34, 0.9);
+            border-color: rgba(88, 166, 255, 0.3);
+        }
+
+        .mcp-tool-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .mcp-tool-icon {
+            font-size: 16px;
+        }
+
+        .mcp-tool-name {
+            font-size: 13px;
+            color: #c9d1d9;
+            font-weight: 500;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            background: #21262d;
+            border-radius: 10px;
+            border: 1px solid #30363d;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #238636;
+            border-color: #2ea043;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #8b949e;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            background: #ffffff;
+            left: 18px;
+        }
+
+        /* Skill Pills */
+        .skill-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            background: rgba(22, 27, 34, 0.6);
+            border: 1px solid rgba(48, 54, 61, 0.4);
+            font-size: 12px;
+            color: #8b949e;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 4px;
+        }
+
+        .skill-pill:hover {
+            background: rgba(22, 27, 34, 0.9);
+            border-color: rgba(88, 166, 255, 0.3);
+            color: #c9d1d9;
+            transform: translateY(-1px);
+        }
+
+        .skill-pill.active {
+            background: rgba(88, 166, 255, 0.15);
+            border-color: rgba(88, 166, 255, 0.5);
+            color: #58a6ff;
+        }
+
+        .skill-pill-check {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1.5px solid #30363d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            transition: all 0.2s;
+        }
+
+        .skill-pill.active .skill-pill-check {
+            background: #58a6ff;
+            border-color: #58a6ff;
+            color: white;
+        }
+
+        .section-card {
+            background: rgba(22, 27, 34, 0.4);
+            border: 1px solid rgba(48, 54, 61, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .section-card:hover {
+            background: rgba(22, 27, 34, 0.6);
+            border-color: rgba(48, 54, 61, 0.5);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .section-action {
+            font-size: 11px;
+            color: #58a6ff;
+            cursor: pointer;
+            transition: color 0.2s;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+
+        .section-action:hover {
+            color: #79b8ff;
+        }
+
+        /* Responsive */
+        @media (max-width: 1280px) {
+            aside {
+                width: 400px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-[#0d1117] text-gray-300 antialiased">
+    <div class="flex h-screen w-full">
+        <!-- Left Sidebar - Notes List -->
+        <nav class="w-60 bg-[#010409] border-r border-[#30363d] flex flex-col">
+            <!-- Header -->
+            <div class="p-4 h-16 flex items-center border-b border-[#30363d]">
+                <h1 class="text-lg font-semibold text-white">Weave</h1>
+            </div>
+
+            <!-- Notes Tree -->
+            <div class="flex-1 p-3 space-y-1 overflow-y-auto" id="noteTree">
+                <div class="note-folder">
+                    <div class="note-tree-item active" data-note-id="unified-page" onclick="selectNote(event, 'unified-page')">
+                        <span class="note-chevron">▶</span>
+                        <span class="note-icon">📝</span>
+                        <span class="note-title">My Unified Page</span>
+                    </div>
+                    <div class="sub-notes" id="unified-page-sub"></div>
+                </div>
+
+                <div class="note-folder">
+                    <div class="note-tree-item" data-note-id="cs-classes" onclick="selectNote(event, 'cs-classes')">
+                        <span class="note-chevron expanded" onclick="toggleFolder(event, 'cs-classes')">▶</span>
+                        <span class="note-icon">📚</span>
+                        <span class="note-title">CS Classes</span>
+                    </div>
+                    <div class="sub-notes expanded" id="cs-classes-sub">
+                        <div class="note-tree-item" data-note-id="ml" onclick="selectNote(event, 'ml')">
+                            <span class="note-chevron">▶</span>
+                            <span class="note-icon">🤖</span>
+                            <span class="note-title">Machine Learning</span>
+                        </div>
+                        <div class="sub-notes" id="ml-sub"></div>
+
+                        <div class="note-tree-item" data-note-id="neural-networks" onclick="selectNote(event, 'neural-networks')">
+                            <span class="note-chevron">▶</span>
+                            <span class="note-icon">🧠</span>
+                            <span class="note-title">Neural Networks</span>
+                        </div>
+                        <div class="sub-notes" id="neural-networks-sub"></div>
+                    </div>
+                </div>
+
+                <div class="note-folder">
+                    <div class="note-tree-item" data-note-id="projects" onclick="selectNote(event, 'projects')">
+                        <span class="note-chevron">▶</span>
+                        <span class="note-icon">💻</span>
+                        <span class="note-title">Projects</span>
+                    </div>
+                    <div class="sub-notes" id="projects-sub"></div>
+                </div>
+            </div>
+
+            <!-- New Page Button -->
+            <div class="p-4">
+                <button class="w-full px-3 py-2 bg-transparent text-gray-400 hover:text-white text-sm transition-all text-left">
+                    + New Page
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="h-16 bg-[#0d1117] border-b border-[#30363d] flex items-center justify-between px-6">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">📝</span>
+                    <input
+                        type="text"
+                        value="My Unified Page"
+                        class="text-lg font-semibold bg-transparent border-none outline-none text-white"
+                    />
+                </div>
+                <div class="text-xs text-gray-500">
+                    Type <kbd class="px-2 py-1 bg-[#161b22] rounded text-gray-400">/</kbd> for commands
+                </div>
+            </header>
+
+            <!-- Canvas Content -->
+            <div class="flex-1 overflow-y-auto">
+                <div class="max-w-4xl mx-auto py-12 px-8" id="canvas">
+                    <!-- Heading Block -->
+                    <div class="canvas-block text-block heading-1">
+                        <div class="block-handle">⋮⋮</div>
+                        <input type="text" placeholder="Untitled" value="Neural Networks Study Guide" />
+                    </div>
+
+                    <!-- Text Block -->
+                    <div class="canvas-block text-block">
+                        <div class="block-handle">⋮⋮</div>
+                        <textarea rows="2" placeholder="Type '/' for commands...">A comprehensive guide to understanding neural networks, including theory, practice, and hands-on examples.</textarea>
+                    </div>
+
+                    <!-- Heading 2 Block -->
+                    <div class="canvas-block text-block heading-2">
+                        <div class="block-handle">⋮⋮</div>
+                        <input type="text" placeholder="Heading 2" value="💡 Quick Tips" />
+                    </div>
+
+                    <!-- Text Block -->
+                    <div class="canvas-block text-block">
+                        <div class="block-handle">⋮⋮</div>
+                        <textarea rows="4" placeholder="Add content...">• Use the left sidebar to organize your notes
+• Click any note title to edit it
+• The AI sidebar helps you improve and search content
+• Type / in text blocks for special commands</textarea>
+                    </div>
+
+                    <!-- Heading 2 Block -->
+                    <div class="canvas-block text-block heading-2">
+                        <div class="block-handle">⋮⋮</div>
+                        <input type="text" placeholder="Section Title" value="🎯 Next Steps" />
+                    </div>
+
+                    <!-- Text Block -->
+                    <div class="canvas-block text-block">
+                        <div class="block-handle">⋮⋮</div>
+                        <textarea rows="3" placeholder="Add content...">Start exploring by creating new notes in the left sidebar. Use the AI sidebar to ask questions about your content or request improvements.</textarea>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- AI Sidebar -->
+        <aside class="w-[480px] flex-shrink-0 border-l border-[#30363d] flex flex-col"
+            style="background: radial-gradient(circle at top left, rgba(185, 28, 28, 0.15) 0%, rgba(234, 88, 12, 0.08) 40%, #010409 80%);">
+
+            <header class="flex-shrink-0 border-b border-[#30363d] flex items-end justify-center"
+                style="background: transparent;">
+                <nav class="flex items-center">
+                    <button class="tab-button active" onclick="switchTab('agent')">Agent</button>
+                    <button class="tab-button" onclick="switchTab('mcp')">MCP</button>
+                    <button class="tab-button" onclick="switchTab('skills')">Skills</button>
+                </nav>
+            </header>
+
+            <!-- Agent Tab Content -->
+            <div class="tab-content active" id="agentTab">
+                <div class="ai-conversation-flow">
+                    <!-- Knowledge Search Bar -->
+                    <div class="knowledge-search">
+                        <span class="search-icon">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Search knowledge base..."
+                            id="knowledgeSearchInput"
+                        />
+                    </div>
+
+                    <div class="message-group chat-bubble">
+                        <span class="ai-message-label">AI Agent</span>
+                        <p class="ai-message-text">
+                            I'm analyzing your unified canvas. I can see you have:
+                            <br><br>
+                            • Multiple text blocks<br>
+                            • Headings and sections<br>
+                            • Neural Networks Study Guide
+                        </p>
+                    </div>
+
+                    <!-- Search Complete Status -->
+                    <div class="status-indicator success chat-bubble">
+                        <span>✓</span>
+                        <span>Knowledge search completed</span>
+                    </div>
+
+                    <!-- AI suggests edit -->
+                    <div class="message-group chat-bubble">
+                        <span class="ai-message-label">AI Agent</span>
+                        <p class="ai-message-text">
+                            I found relevant information about neural networks. Let me update your study guide with the latest insights.
+                        </p>
+                    </div>
+
+                    <!-- Edit Suggestion Block (Glassmorphic Diff) -->
+                    <div class="code-block-container chat-bubble" data-block-id="neural-guide">
+                        <div class="code-block-header">
+                            <span class="code-block-title">
+                                <span>📝</span>
+                                <span>Neural Networks Study Guide</span>
+                            </span>
+                            <div class="code-block-stats">
+                                <span class="stat-add">+23 lines</span>
+                                <span class="stat-del">-8 lines</span>
+                            </div>
+                        </div>
+                        <div class="code-block-content">
+                            <p class="text-gray-500">A comprehensive guide to understanding neural networks...</p>
+                            <p class="diff-del">A comprehensive guide to understanding neural networks, including theory, practice, and hands-on examples.</p>
+                            <p class="diff-add">A comprehensive guide to understanding neural networks, including advanced theory, practical implementations, and hands-on examples with TensorFlow and PyTorch.</p>
+                            <p class="diff-add"><br></p>
+                            <p class="diff-add"><strong>Key Concepts:</strong></p>
+                            <p class="diff-add">• Forward Propagation: Data flows through layers</p>
+                            <p class="diff-add">• Backpropagation: Gradient descent optimization</p>
+                            <p class="diff-add">• Activation Functions: ReLU, Sigmoid, Tanh</p>
+                        </div>
+                        <div class="code-block-footer">
+                            <span class="text-xs text-gray-400">Neural Networks Study Guide</span>
+                            <div class="code-block-actions">
+                                <button class="apply-btn" onclick="applyEdit('neural-guide')">
+                                    ✓ Apply Changes
+                                </button>
+                                <button class="reject-btn" onclick="rejectEdit('neural-guide')">
+                                    ✕ Reject
+                                </button>
+                                <button class="code-action-btn" title="Refresh">🔄</button>
+                                <button class="code-action-btn" title="Copy">📋</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="message-group chat-bubble">
+                        <div class="bg-[#161b22] rounded-lg p-3 border border-[#30363d]">
+                            <div class="text-xs font-semibold text-purple-300 mb-2">Quick Commands</div>
+                            <div class="space-y-1 text-xs text-gray-300">
+                                <div><code class="px-2 py-0.5 bg-[#0d1117] rounded">/search</code> Search knowledge</div>
+                                <div><code class="px-2 py-0.5 bg-[#0d1117] rounded">/edit</code> Edit current note</div>
+                                <div><code class="px-2 py-0.5 bg-[#0d1117] rounded">/improve</code> Improve content</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MCP Tab Content -->
+            <div class="tab-content" id="mcpTab">
+                <div class="ai-conversation-flow">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title">🔌 MCP Servers</div>
+                            <button class="section-action" onclick="alert('Add new MCP server')">+ Add</button>
+                        </div>
+
+                        <div class="mcp-tool-item" onclick="toggleMCPTool(this)">
+                            <div class="mcp-tool-info">
+                                <span class="mcp-tool-icon">🐙</span>
+                                <span class="mcp-tool-name">GitHub</span>
+                            </div>
+                            <div class="toggle-switch active">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="mcp-tool-item" onclick="toggleMCPTool(this)">
+                            <div class="mcp-tool-info">
+                                <span class="mcp-tool-icon">📁</span>
+                                <span class="mcp-tool-name">Filesystem</span>
+                            </div>
+                            <div class="toggle-switch active">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="mcp-tool-item" onclick="toggleMCPTool(this)">
+                            <div class="mcp-tool-info">
+                                <span class="mcp-tool-icon">🔍</span>
+                                <span class="mcp-tool-name">Web Search</span>
+                            </div>
+                            <div class="toggle-switch active">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="mcp-tool-item" onclick="toggleMCPTool(this)">
+                            <div class="mcp-tool-info">
+                                <span class="mcp-tool-icon">📊</span>
+                                <span class="mcp-tool-name">Database</span>
+                            </div>
+                            <div class="toggle-switch">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="mcp-tool-item" onclick="toggleMCPTool(this)">
+                            <div class="mcp-tool-info">
+                                <span class="mcp-tool-icon">🎨</span>
+                                <span class="mcp-tool-name">Figma</span>
+                            </div>
+                            <div class="toggle-switch">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="mcp-tool-item" onclick="toggleMCPTool(this)">
+                            <div class="mcp-tool-info">
+                                <span class="mcp-tool-icon">📧</span>
+                                <span class="mcp-tool-name">Gmail</span>
+                            </div>
+                            <div class="toggle-switch">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="message-group" style="margin-top: 16px;">
+                        <div class="bg-[#161b22] rounded-lg p-4 border border-[#30363d]">
+                            <div class="text-sm text-gray-400 mb-2">About MCP</div>
+                            <p class="text-xs text-gray-500 leading-relaxed">
+                                Model Context Protocol (MCP) servers provide your AI with external capabilities. Enable the tools you need, and the AI can use them to fetch data, interact with services, and extend its functionality.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skills Tab Content -->
+            <div class="tab-content" id="skillsTab">
+                <div class="ai-conversation-flow">
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title">✨ Available Skills</div>
+                            <button class="section-action" onclick="alert('Manage skills')">Manage</button>
+                        </div>
+
+                        <div style="display: flex; flex-wrap: wrap; margin: -4px;">
+                            <div class="skill-pill active" onclick="toggleSkill(this)">
+                                <div class="skill-pill-check">✓</div>
+                                <span>📝 Note Writer</span>
+                            </div>
+
+                            <div class="skill-pill active" onclick="toggleSkill(this)">
+                                <div class="skill-pill-check">✓</div>
+                                <span>💻 Code Generator</span>
+                            </div>
+
+                            <div class="skill-pill active" onclick="toggleSkill(this)">
+                                <div class="skill-pill-check">✓</div>
+                                <span>📊 Data Analyzer</span>
+                            </div>
+
+                            <div class="skill-pill" onclick="toggleSkill(this)">
+                                <div class="skill-pill-check"></div>
+                                <span>🎨 UI Designer</span>
+                            </div>
+
+                            <div class="skill-pill" onclick="toggleSkill(this)">
+                                <div class="skill-pill-check"></div>
+                                <span>🔍 Researcher</span>
+                            </div>
+
+                            <div class="skill-pill" onclick="toggleSkill(this)">
+                                <div class="skill-pill-check"></div>
+                                <span>📚 Summarizer</span>
+                            </div>
+
+                            <div class="skill-pill" onclick="toggleSkill(this)">
+                                <div class="skill-pill-check"></div>
+                                <span>🌐 Translator</span>
+                            </div>
+
+                            <div class="skill-pill" onclick="toggleSkill(this)">
+                                <div class="skill-pill-check"></div>
+                                <span>🧮 Math Solver</span>
+                            </div>
+
+                            <div class="skill-pill" onclick="toggleSkill(this)">
+                                <div class="skill-pill-check"></div>
+                                <span>✍️ Editor</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="message-group" style="margin-top: 16px;">
+                        <div class="bg-[#161b22] rounded-lg p-4 border border-[#30363d]">
+                            <div class="text-sm text-gray-400 mb-2">About Skills</div>
+                            <p class="text-xs text-gray-500 leading-relaxed">
+                                Skills are specialized instruction sets that enhance the AI's capabilities for specific tasks. Activate the skills you need for your current work. Multiple skills can be active simultaneously.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Input with Unicode Icons -->
+            <div class="ai-input-unified">
+                <!-- Context indicator -->
+                <div class="input-context">
+                    <span class="context-icon">▣</span>
+                    <span class="context-text">My Unified Page</span>
+                    <button class="context-action">×</button>
+                    <button class="context-action">⚙</button>
+                </div>
+
+                <!-- Text input -->
+                <textarea class="input-field" placeholder="Ask me anything about your canvas..." rows="2"></textarea>
+
+                <!-- Action row -->
+                <div class="input-actions">
+                    <button class="mode-selector-text">
+                        <span>Agent Mode</span>
+                        <span class="dropdown-arrow" style="color: #6e7681;">▾</span>
+                    </button>
+                    <div class="action-buttons">
+                        <button class="action-btn" title="Lock context">◉</button>
+                        <button class="action-btn" title="Search web">⚡</button>
+                        <button class="send-btn" title="Send message">↗</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            const tabMap = {
+                'agent': 'agentTab',
+                'mcp': 'mcpTab',
+                'skills': 'skillsTab'
+            };
+
+            const selectedTab = document.getElementById(tabMap[tabName]);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+
+            // Activate corresponding button
+            event.target.classList.add('active');
+        }
+
+        // Toggle MCP Tool
+        function toggleMCPTool(element) {
+            const toggle = element.querySelector('.toggle-switch');
+            toggle.classList.toggle('active');
+
+            const toolName = element.querySelector('.mcp-tool-name').textContent;
+            const isActive = toggle.classList.contains('active');
+            console.log(`${toolName} MCP tool ${isActive ? 'enabled' : 'disabled'}`);
+        }
+
+        // Toggle Skill
+        function toggleSkill(element) {
+            element.classList.toggle('active');
+
+            const skillName = element.querySelector('span:last-child').textContent;
+            const isActive = element.classList.contains('active');
+            console.log(`${skillName} skill ${isActive ? 'activated' : 'deactivated'}`);
+        }
+
+        // Apply edit suggestion
+        function applyEdit(blockId) {
+            console.log('✅ Applying edit for block:', blockId);
+
+            const editBlock = document.querySelector(`[data-block-id="${blockId}"]`);
+            if (!editBlock) return;
+
+            // Animate the block
+            editBlock.style.transition = 'all 0.3s ease';
+            editBlock.style.transform = 'scale(0.95)';
+            editBlock.style.opacity = '0.5';
+
+            setTimeout(() => {
+                editBlock.style.transform = 'scale(1)';
+                editBlock.style.opacity = '1';
+
+                // Show success message
+                const successMsg = document.createElement('div');
+                successMsg.className = 'status-indicator success chat-bubble';
+                successMsg.innerHTML = `
+                    <span>✓</span>
+                    <span>Changes applied successfully to canvas</span>
+                `;
+
+                // Insert after the edit block
+                editBlock.parentNode.insertBefore(successMsg, editBlock.nextSibling);
+
+                // Fade out and remove the edit block
+                setTimeout(() => {
+                    editBlock.style.opacity = '0';
+                    setTimeout(() => {
+                        editBlock.remove();
+                    }, 300);
+                }, 1000);
+            }, 300);
+        }
+
+        // Reject edit suggestion
+        function rejectEdit(blockId) {
+            console.log('❌ Rejecting edit for block:', blockId);
+
+            const editBlock = document.querySelector(`[data-block-id="${blockId}"]`);
+            if (!editBlock) return;
+
+            // Animate removal
+            editBlock.style.transition = 'all 0.3s ease';
+            editBlock.style.transform = 'translateX(20px)';
+            editBlock.style.opacity = '0';
+
+            setTimeout(() => {
+                editBlock.remove();
+
+                // Show rejection message
+                const agentTab = document.querySelector('#agentTab .ai-conversation-flow');
+                const rejectedMsg = document.createElement('div');
+                rejectedMsg.className = 'status-indicator chat-bubble';
+                rejectedMsg.innerHTML = `
+                    <span>ℹ️</span>
+                    <span>Edit suggestion dismissed</span>
+                `;
+                agentTab.appendChild(rejectedMsg);
+
+                // Auto-scroll to bottom
+                agentTab.scrollTop = agentTab.scrollHeight;
+            }, 300);
+        }
+
+        // Note selection
+        function selectNote(event, noteId) {
+            event.preventDefault();
+            document.querySelectorAll('.note-tree-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.note-tree-item').classList.add('active');
+        }
+
+        // Folder toggle
+        function toggleFolder(event, folderId) {
+            event.stopPropagation();
+            const chevron = event.target;
+            const subNotes = document.getElementById(folderId + '-sub');
+            chevron.classList.toggle('expanded');
+            subNotes.classList.toggle('expanded');
+        }
+    </script>
+</body>
+</html>

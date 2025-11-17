@@ -333,6 +333,44 @@
             background: white;
             cursor: crosshair;
         }
+
+        /* Glassmorphic Label Bar */
+        .block-label {
+            position: absolute;
+            top: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(22, 27, 34, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+            border-radius: 20px;
+            padding: 4px 16px;
+            min-width: 120px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 5;
+        }
+
+        .canvas-element:hover .block-label {
+            opacity: 1;
+        }
+
+        .block-label input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #ffffff;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 500;
+            width: 100%;
+            padding: 0;
+        }
+
+        .block-label input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
     </style>
 </head>
 <body class="bg-[#0d1117] text-gray-300 antialiased overflow-hidden">
@@ -429,18 +467,24 @@
             </div>
 
             <!-- Canvas Mode Content -->
-            <div id="canvasMode" class="flex-1 relative hidden">
+            <div id="canvasMode" class="flex-1 relative hidden overflow-hidden">
                 <!-- Canvas Toolbar (floating) -->
                 <div class="absolute top-6 left-1/2 transform -translate-x-1/2 z-20">
                     <div class="canvas-toolbar">
-                        <button class="canvas-tool-btn active" onclick="selectTool('hand')" title="Hand - Move & Resize">
+                        <button class="canvas-tool-btn active" onclick="selectTool('hand')" title="Hand - Move & Pan">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M9 11V6a2 2 0 0 1 4 0v5M9 11a2 2 0 1 1-4 0V9M9 11h4m0 0a2 2 0 1 0 4 0V6M13 16v-5m0 5a2 2 0 0 0 4 0v-4m-4 4H9m8-9V5a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v6"></path>
                             </svg>
                         </button>
-                        <button class="canvas-tool-btn" onclick="selectTool('arrow')" title="Arrow - Select & Connect">
+                        <button class="canvas-tool-btn" onclick="selectTool('arrow')" title="Arrow - Select">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
+                            </svg>
+                        </button>
+                        <button class="canvas-tool-btn" onclick="selectTool('connector')" title="Connector - Draw Lines">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="15 8 19 12 15 16"></polyline>
                             </svg>
                         </button>
                         <div class="w-px bg-[#30363d] my-1"></div>
@@ -491,19 +535,45 @@
                     </div>
                 </div>
 
-                <!-- Infinity Canvas -->
-                <div id="infinityCanvas" class="infinity-canvas w-full h-full">
-                    <!-- SVG for connections -->
-                    <svg class="absolute inset-0 pointer-events-none" style="width: 100%; height: 100%; z-index: 1;">
-                        <defs>
-                            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                                <polygon points="0 0, 10 3, 0 6" fill="#58a6ff" />
-                            </marker>
-                        </defs>
-                    </svg>
+                <!-- Zoom Controls -->
+                <div class="absolute bottom-6 right-6 z-20">
+                    <div class="canvas-toolbar flex-col" style="flex-direction: column;">
+                        <button class="canvas-tool-btn" onclick="zoomIn()" title="Zoom In">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                <line x1="11" y1="8" x2="11" y2="14"></line>
+                                <line x1="8" y1="11" x2="14" y2="11"></line>
+                            </svg>
+                        </button>
+                        <button class="canvas-tool-btn" onclick="resetZoom()" title="Reset Zoom">
+                            <span style="font-size: 12px; font-weight: 600;" id="zoomLevel">100%</span>
+                        </button>
+                        <button class="canvas-tool-btn" onclick="zoomOut()" title="Zoom Out">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                <line x1="8" y1="11" x2="14" y2="11"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
 
-                    <!-- Canvas Elements Container -->
-                    <div id="canvasElements" style="position: relative; width: 100%; height: 100%;"></div>
+                <!-- Infinity Canvas (scrollable viewport) -->
+                <div id="canvasViewport" class="w-full h-full overflow-auto" style="position: relative;">
+                    <div id="infinityCanvas" class="infinity-canvas" style="width: 5000px; height: 5000px; position: relative;">
+                        <!-- SVG for connections -->
+                        <svg id="connectionSvg" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+                            <defs>
+                                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                    <polygon points="0 0, 10 3, 0 6" fill="#58a6ff" />
+                                </marker>
+                            </defs>
+                        </svg>
+
+                        <!-- Canvas Elements Container -->
+                        <div id="canvasElements" style="position: absolute; inset: 0; transform-origin: 0 0;"></div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -613,6 +683,14 @@
         let drawingTool = 'pen';
         let drawingColor = '#000000';
 
+        // Zoom and Pan state
+        let zoomScale = 1.0;
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+        let panScrollLeft = 0;
+        let panScrollTop = 0;
+
         function switchMode(mode) {
             currentMode = mode;
             const noteMode = document.getElementById('noteMode');
@@ -682,11 +760,16 @@
 
         function initializeCanvas() {
             canvasElements = [
-                { id: nextId++, type: 'note', x: 200, y: 150, width: 150, height: 150, content: 'Start Here', color: '#a78bfa' },
-                { id: nextId++, type: 'drawing', x: 450, y: 150, width: 200, height: 200, content: '', color: '#ffffff', drawing: null },
-                { id: nextId++, type: 'note', x: 750, y: 150, width: 150, height: 150, content: 'Ideas', color: '#fb923c' }
+                { id: nextId++, type: 'note', x: 2200, y: 2350, width: 150, height: 150, content: 'Start Here', color: '#a78bfa', label: 'First Note' },
+                { id: nextId++, type: 'drawing', x: 2450, y: 2350, width: 200, height: 200, content: '', color: '#ffffff', drawing: null, label: 'Drawing' },
+                { id: nextId++, type: 'note', x: 2750, y: 2350, width: 150, height: 150, content: 'Ideas', color: '#fb923c', label: 'Ideas' }
             ];
             renderCanvasElements();
+
+            // Center the viewport on the initial elements
+            const viewport = document.getElementById('canvasViewport');
+            viewport.scrollLeft = 2000;
+            viewport.scrollTop = 2000;
         }
 
         function createElement(type, x, y) {
@@ -700,10 +783,36 @@
                 height: type === 'note' ? 150 : 200,
                 content: type === 'note' ? 'New note...' : type === 'text' ? 'Type here...' : type === 'website' ? 'https://example.com' : type === 'mindmap' ? 'Central Idea' : '',
                 color: type === 'note' ? colors[Math.floor(Math.random() * colors.length)] : '#ffffff',
-                drawing: null
+                drawing: null,
+                label: type.charAt(0).toUpperCase() + type.slice(1)
             };
             canvasElements.push(element);
             renderCanvasElements();
+        }
+
+        // Zoom functions
+        function zoomIn() {
+            zoomScale = Math.min(zoomScale + 0.1, 2.0);
+            applyZoom();
+        }
+
+        function zoomOut() {
+            zoomScale = Math.max(zoomScale - 0.1, 0.5);
+            applyZoom();
+        }
+
+        function resetZoom() {
+            zoomScale = 1.0;
+            applyZoom();
+        }
+
+        function applyZoom() {
+            const elementsContainer = document.getElementById('canvasElements');
+            const svg = document.getElementById('connectionSvg');
+            elementsContainer.style.transform = `scale(${zoomScale})`;
+            svg.style.transform = `scale(${zoomScale})`;
+            document.getElementById('zoomLevel').textContent = Math.round(zoomScale * 100) + '%';
+            renderConnections();
         }
 
         function renderCanvasElements() {
@@ -779,6 +888,12 @@
                     `;
                 }
 
+                // Add glassmorphic label bar
+                const labelBar = document.createElement('div');
+                labelBar.className = 'block-label';
+                labelBar.innerHTML = `<input type="text" value="${element.label || ''}" placeholder="Label..." onchange="updateLabel(${element.id}, this.value)" onclick="event.stopPropagation()" />`;
+                div.appendChild(labelBar);
+
                 // Add resize handles
                 ['nw', 'ne', 'sw', 'se'].forEach(pos => {
                     const handle = document.createElement('div');
@@ -788,12 +903,16 @@
                     div.appendChild(handle);
                 });
 
-                // Click to open modal (only in arrow mode)
+                // Click to open modal or connect (arrow/connector modes)
                 div.addEventListener('click', (e) => {
                     if (e.target.classList.contains('resize-handle')) return;
+                    if (e.target.tagName === 'INPUT') return;
 
                     if (selectedTool === 'arrow') {
-                        // If in connection mode
+                        // Arrow tool opens modal
+                        openEditModal(element);
+                    } else if (selectedTool === 'connector') {
+                        // Connector tool creates connections
                         if (connectingFrom) {
                             // Create connection
                             if (connectingFrom.id !== element.id) {
@@ -802,12 +921,16 @@
                                     to: element.id
                                 });
                                 renderConnections();
+                                // Reset outline on previous element
+                                document.querySelectorAll('.canvas-element').forEach(el => {
+                                    el.style.outline = '';
+                                });
                             }
                             connectingFrom = null;
-                            div.style.outline = '';
                         } else {
-                            // Single click opens modal
-                            openEditModal(element);
+                            // First click - select element to connect from
+                            connectingFrom = element;
+                            div.style.outline = '2px solid #58a6ff';
                         }
                     }
                 });
@@ -876,7 +999,9 @@
         }
 
         function renderConnections() {
-            const svg = document.querySelector('#canvasElements').previousElementSibling;
+            const svg = document.getElementById('connectionSvg');
+            if (!svg) return;
+
             // Clear existing connection lines
             svg.querySelectorAll('line').forEach(line => line.remove());
 
@@ -885,10 +1010,10 @@
                 const toEl = canvasElements.find(el => el.id === conn.to);
 
                 if (fromEl && toEl) {
-                    const fromX = fromEl.x + fromEl.width / 2;
-                    const fromY = fromEl.y + fromEl.height / 2;
-                    const toX = toEl.x + toEl.width / 2;
-                    const toY = toEl.y + toEl.height / 2;
+                    const fromX = (fromEl.x + fromEl.width / 2) * zoomScale;
+                    const fromY = (fromEl.y + fromEl.height / 2) * zoomScale;
+                    const toX = (toEl.x + toEl.width / 2) * zoomScale;
+                    const toY = (toEl.y + toEl.height / 2) * zoomScale;
 
                     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                     line.setAttribute('x1', fromX);
@@ -901,6 +1026,13 @@
                     svg.appendChild(line);
                 }
             });
+        }
+
+        function updateLabel(elementId, newLabel) {
+            const element = canvasElements.find(el => el.id === elementId);
+            if (element) {
+                element.label = newLabel;
+            }
         }
 
         function doResize(e) {
@@ -1175,15 +1307,53 @@
 
         // Canvas click to create elements
         document.getElementById('infinityCanvas').addEventListener('click', (e) => {
-            if (e.target.id === 'infinityCanvas' || e.target.id === 'canvasElements') {
-                if (selectedTool && selectedTool !== 'hand' && selectedTool !== 'arrow') {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
+            if (e.target.id === 'infinityCanvas' || e.target.id === 'canvasElements' || e.target.id === 'connectionSvg') {
+                if (selectedTool && selectedTool !== 'hand' && selectedTool !== 'arrow' && selectedTool !== 'connector') {
+                    const x = e.offsetX;
+                    const y = e.offsetY;
                     createElement(selectedTool, x, y);
                     selectTool('hand');
                     document.querySelectorAll('.canvas-tool-btn')[0].classList.add('active');
                 }
+            }
+        });
+
+        // Canvas panning with hand tool
+        const canvasViewport = document.getElementById('canvasViewport');
+
+        canvasViewport.addEventListener('mousedown', (e) => {
+            // Only pan when hand tool is active and clicking on canvas background
+            if (selectedTool === 'hand' && (e.target.id === 'infinityCanvas' || e.target.id === 'canvasElements' || e.target.id === 'connectionSvg')) {
+                isPanning = true;
+                panStartX = e.clientX;
+                panStartY = e.clientY;
+                panScrollLeft = canvasViewport.scrollLeft;
+                panScrollTop = canvasViewport.scrollTop;
+                canvasViewport.style.cursor = 'grabbing';
+            }
+        });
+
+        canvasViewport.addEventListener('mousemove', (e) => {
+            if (isPanning) {
+                e.preventDefault();
+                const dx = e.clientX - panStartX;
+                const dy = e.clientY - panStartY;
+                canvasViewport.scrollLeft = panScrollLeft - dx;
+                canvasViewport.scrollTop = panScrollTop - dy;
+            }
+        });
+
+        canvasViewport.addEventListener('mouseup', () => {
+            if (isPanning) {
+                isPanning = false;
+                canvasViewport.style.cursor = '';
+            }
+        });
+
+        canvasViewport.addEventListener('mouseleave', () => {
+            if (isPanning) {
+                isPanning = false;
+                canvasViewport.style.cursor = '';
             }
         });
 
@@ -1215,21 +1385,21 @@
             e.preventDefault();
 
             if (draggedNoteData && currentMode === 'canvas') {
-                const rect = infinityCanvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                const x = e.offsetX;
+                const y = e.offsetY;
 
                 const colors = ['#a78bfa', '#60a5fa', '#34d399', '#fbbf24', '#fb923c', '#f472b6'];
                 const element = {
                     id: nextId++,
                     type: 'note',
-                    x: x - 75, // Center the note on drop point
-                    y: y - 75,
+                    x: x - 100, // Center the note on drop point
+                    y: y - 100,
                     width: 200,
                     height: 200,
                     content: draggedNoteData.content,
                     color: colors[Math.floor(Math.random() * colors.length)],
-                    drawing: null
+                    drawing: null,
+                    label: draggedNoteData.title
                 };
 
                 canvasElements.push(element);

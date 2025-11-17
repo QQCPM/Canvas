@@ -350,17 +350,35 @@
             <!-- Notes Tree -->
             <div class="flex-1 p-3 space-y-1 overflow-y-auto">
                 <div class="text-xs font-semibold text-gray-500 mb-2 px-2">NOTES</div>
-                <div class="flex items-center gap-2 p-2 rounded-lg bg-[#161b22] text-white cursor-pointer">
-                    <span>📝</span>
+                <div class="note-item flex items-center gap-2 p-2 rounded-lg bg-[#161b22] text-white cursor-grab"
+                     draggable="true"
+                     data-note-title="My First Note"
+                     data-note-content="Welcome to Weave\n\nStart taking notes here. Switch to Canvas mode to create visual diagrams and mind maps.">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
                     <span class="text-sm">My First Note</span>
                 </div>
-                <div class="flex items-center gap-2 p-2 rounded-lg hover:bg-[#161b22] cursor-pointer">
-                    <span>📚</span>
-                    <span class="text-sm text-gray-400">Study Notes</span>
+                <div class="note-item flex items-center gap-2 p-2 rounded-lg hover:bg-[#161b22] cursor-grab text-gray-400"
+                     draggable="true"
+                     data-note-title="Study Notes"
+                     data-note-content="Study notes go here...">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span class="text-sm">Study Notes</span>
                 </div>
-                <div class="flex items-center gap-2 p-2 rounded-lg hover:bg-[#161b22] cursor-pointer">
-                    <span>💡</span>
-                    <span class="text-sm text-gray-400">Ideas</span>
+                <div class="note-item flex items-center gap-2 p-2 rounded-lg hover:bg-[#161b22] cursor-grab text-gray-400"
+                     draggable="true"
+                     data-note-title="Ideas"
+                     data-note-content="Brainstorm ideas here...">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span class="text-sm">Ideas</span>
                 </div>
             </div>
 
@@ -415,28 +433,60 @@
                 <!-- Canvas Toolbar (floating) -->
                 <div class="absolute top-6 left-1/2 transform -translate-x-1/2 z-20">
                     <div class="canvas-toolbar">
-                        <button class="canvas-tool-btn active" onclick="selectTool('select')" title="Select">
-                            <span>↖</span>
+                        <button class="canvas-tool-btn active" onclick="selectTool('hand')" title="Hand - Move & Resize">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 11V6a2 2 0 0 1 4 0v5M9 11a2 2 0 1 1-4 0V9M9 11h4m0 0a2 2 0 1 0 4 0V6M13 16v-5m0 5a2 2 0 0 0 4 0v-4m-4 4H9m8-9V5a2 2 0 0 0-2-2h0a2 2 0 0 0-2 2v6"></path>
+                            </svg>
+                        </button>
+                        <button class="canvas-tool-btn" onclick="selectTool('arrow')" title="Arrow - Select & Connect">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
+                            </svg>
                         </button>
                         <div class="w-px bg-[#30363d] my-1"></div>
                         <button class="canvas-tool-btn" onclick="selectTool('note')" title="Note Block">
-                            <span>📝</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
                         </button>
                         <button class="canvas-tool-btn" onclick="selectTool('drawing')" title="Drawing">
-                            <span>✏️</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                                <path d="M2 2l7.586 7.586"></path>
+                                <circle cx="11" cy="11" r="2"></circle>
+                            </svg>
                         </button>
                         <button class="canvas-tool-btn" onclick="selectTool('text')" title="Text">
-                            <span>A</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                                <line x1="9" y1="20" x2="15" y2="20"></line>
+                                <line x1="12" y1="4" x2="12" y2="20"></line>
+                            </svg>
                         </button>
                         <button class="canvas-tool-btn" onclick="selectTool('mindmap')" title="Mind Map">
-                            <span>🧠</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <circle cx="19" cy="6" r="2"></circle>
+                                <circle cx="19" cy="18" r="2"></circle>
+                                <circle cx="5" cy="6" r="2"></circle>
+                                <circle cx="5" cy="18" r="2"></circle>
+                                <line x1="14" y1="11" x2="17.5" y2="7.5"></line>
+                                <line x1="14" y1="13" x2="17.5" y2="16.5"></line>
+                                <line x1="10" y1="11" x2="6.5" y2="7.5"></line>
+                                <line x1="10" y1="13" x2="6.5" y2="16.5"></line>
+                            </svg>
                         </button>
                         <button class="canvas-tool-btn" onclick="selectTool('website')" title="Website">
-                            <span>🌐</span>
-                        </button>
-                        <div class="w-px bg-[#30363d] my-1"></div>
-                        <button class="canvas-tool-btn" onclick="selectTool('connector')" title="Connect">
-                            <span>—</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -541,10 +591,14 @@
         let currentMode = 'note';
         let leftSidebarOpen = true;
         let rightSidebarOpen = true;
-        let selectedTool = 'select';
+        let selectedTool = 'hand';
         let canvasElements = [];
         let nextId = 1;
         let editingElement = null;
+
+        // Connection state
+        let connectingFrom = null;
+        let connections = [];
 
         // Resize state
         let isResizing = false;
@@ -668,14 +722,24 @@
 
                 if (element.type === 'note') {
                     div.innerHTML = `
-                        <span class="note-icon">📝</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.7;">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
                         <div class="note-content">${element.content}</div>
                     `;
                 } else if (element.type === 'drawing') {
                     if (element.drawing) {
                         div.innerHTML = `<img src="${element.drawing}" style="width: 100%; height: 100%; object-fit: contain;" />`;
                     } else {
-                        div.innerHTML = '<span style="font-size: 48px;">✏️</span>';
+                        div.innerHTML = `
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #6e7681;">
+                                <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                                <path d="M2 2l7.586 7.586"></path>
+                                <circle cx="11" cy="11" r="2"></circle>
+                            </svg>
+                        `;
                     }
                 } else if (element.type === 'text') {
                     div.style.backgroundColor = '#ffffff';
@@ -699,7 +763,17 @@
                     div.style.justifyContent = 'center';
                     div.innerHTML = `
                         <div style="text-align: center;">
-                            <div style="font-size: 24px; margin-bottom: 4px;">🧠</div>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" style="margin: 0 auto 4px;">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <circle cx="19" cy="6" r="2"></circle>
+                                <circle cx="19" cy="18" r="2"></circle>
+                                <circle cx="5" cy="6" r="2"></circle>
+                                <circle cx="5" cy="18" r="2"></circle>
+                                <line x1="14" y1="11" x2="17.5" y2="7.5"></line>
+                                <line x1="14" y1="13" x2="17.5" y2="16.5"></line>
+                                <line x1="10" y1="11" x2="6.5" y2="7.5"></line>
+                                <line x1="10" y1="13" x2="6.5" y2="16.5"></line>
+                            </svg>
                             <div style="color: #7c3aed; font-weight: 600; font-size: 12px;">${element.content}</div>
                         </div>
                     `;
@@ -714,19 +788,36 @@
                     div.appendChild(handle);
                 });
 
-                // Click to open modal
+                // Click to open modal (only in arrow mode)
                 div.addEventListener('click', (e) => {
-                    if (!e.target.classList.contains('resize-handle')) {
-                        openEditModal(element);
+                    if (e.target.classList.contains('resize-handle')) return;
+
+                    if (selectedTool === 'arrow') {
+                        // If in connection mode
+                        if (connectingFrom) {
+                            // Create connection
+                            if (connectingFrom.id !== element.id) {
+                                connections.push({
+                                    from: connectingFrom.id,
+                                    to: element.id
+                                });
+                                renderConnections();
+                            }
+                            connectingFrom = null;
+                            div.style.outline = '';
+                        } else {
+                            // Single click opens modal
+                            openEditModal(element);
+                        }
                     }
                 });
 
-                // Make draggable
+                // Make draggable (only in hand mode)
                 let isDragging = false;
                 let dragStartX, dragStartY, elemStartX, elemStartY;
 
                 div.addEventListener('mousedown', (e) => {
-                    if (selectedTool !== 'select') return;
+                    if (selectedTool !== 'hand') return;
                     if (e.target.classList.contains('resize-handle')) return;
 
                     isDragging = true;
@@ -760,10 +851,15 @@
 
                 container.appendChild(div);
             });
+
+            // Render connections after elements are rendered
+            renderConnections();
         }
 
         function startResize(e) {
             e.stopPropagation();
+            if (selectedTool !== 'hand') return; // Only resize in hand mode
+
             isResizing = true;
             resizeHandle = e.target.dataset.handle;
             resizeElement = canvasElements.find(el => el.id == e.target.parentElement.dataset.id);
@@ -777,6 +873,34 @@
 
             document.addEventListener('mousemove', doResize);
             document.addEventListener('mouseup', stopResize);
+        }
+
+        function renderConnections() {
+            const svg = document.querySelector('#canvasElements').previousElementSibling;
+            // Clear existing connection lines
+            svg.querySelectorAll('line').forEach(line => line.remove());
+
+            connections.forEach(conn => {
+                const fromEl = canvasElements.find(el => el.id === conn.from);
+                const toEl = canvasElements.find(el => el.id === conn.to);
+
+                if (fromEl && toEl) {
+                    const fromX = fromEl.x + fromEl.width / 2;
+                    const fromY = fromEl.y + fromEl.height / 2;
+                    const toX = toEl.x + toEl.width / 2;
+                    const toY = toEl.y + toEl.height / 2;
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', fromX);
+                    line.setAttribute('y1', fromY);
+                    line.setAttribute('x2', toX);
+                    line.setAttribute('y2', toY);
+                    line.setAttribute('stroke', '#58a6ff');
+                    line.setAttribute('stroke-width', '2');
+                    line.setAttribute('marker-end', 'url(#arrowhead)');
+                    svg.appendChild(line);
+                }
+            });
         }
 
         function doResize(e) {
@@ -847,8 +971,19 @@
                 modalBody.innerHTML = `
                     <div style="height: 100%; display: flex; flex-direction: column;">
                         <div style="display: flex; gap: 12px; margin-bottom: 16px; align-items: center;">
-                            <button onclick="setDrawingTool('pen')" style="padding: 12px; border-radius: 8px; background: ${drawingTool === 'pen' ? '#3b82f6' : '#e5e7eb'}; color: ${drawingTool === 'pen' ? 'white' : '#374151'}; border: none; cursor: pointer;">✏️ Pen</button>
-                            <button onclick="setDrawingTool('eraser')" style="padding: 12px; border-radius: 8px; background: ${drawingTool === 'eraser' ? '#3b82f6' : '#e5e7eb'}; color: ${drawingTool === 'eraser' ? 'white' : '#374151'}; border: none; cursor: pointer;">⚪ Eraser</button>
+                            <button onclick="setDrawingTool('pen')" style="padding: 12px 16px; border-radius: 8px; background: ${drawingTool === 'pen' ? '#3b82f6' : '#e5e7eb'}; color: ${drawingTool === 'pen' ? 'white' : '#374151'}; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                                </svg>
+                                Pen
+                            </button>
+                            <button onclick="setDrawingTool('eraser')" style="padding: 12px 16px; border-radius: 8px; background: ${drawingTool === 'eraser' ? '#3b82f6' : '#e5e7eb'}; color: ${drawingTool === 'eraser' ? 'white' : '#374151'}; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                </svg>
+                                Eraser
+                            </button>
                             <input type="color" id="drawColorPicker" value="${drawingColor}" onchange="drawingColor = this.value" style="width: 48px; height: 48px; border-radius: 8px; cursor: pointer;" />
                             <button onclick="clearCanvas()" style="padding: 12px 16px; border-radius: 8px; background: #fca5a5; color: #7f1d1d; border: none; cursor: pointer; margin-left: auto;">Clear Canvas</button>
                         </div>
@@ -870,7 +1005,11 @@
                         <input type="url" id="websiteUrl" value="${element.content}" placeholder="https://example.com" style="padding: 16px; border: 2px solid #d1d5db; border-radius: 12px; font-size: 16px; margin-bottom: 16px;" />
                         <div style="flex: 1; background: #f3f4f6; border-radius: 16px; display: flex; align-items: center; justify-content: center;">
                             <div style="text-align: center; color: #6b7280;">
-                                <div style="font-size: 48px; margin-bottom: 12px;">🌐</div>
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 12px;">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                                </svg>
                                 <div>Enter a valid URL to preview the website</div>
                                 <div style="font-size: 12px; margin-top: 8px;">(Preview feature coming soon)</div>
                             </div>
@@ -883,9 +1022,19 @@
                 modalBody.innerHTML = `
                     <div style="height: 100%; display: flex; align-items: center; justify-content: center;">
                         <div style="text-align: center; max-width: 600px;">
-                            <div style="font-size: 96px; margin-bottom: 24px;">🧠</div>
+                            <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 24px;">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <circle cx="19" cy="6" r="2"></circle>
+                                <circle cx="19" cy="18" r="2"></circle>
+                                <circle cx="5" cy="6" r="2"></circle>
+                                <circle cx="5" cy="18" r="2"></circle>
+                                <line x1="14" y1="11" x2="17.5" y2="7.5"></line>
+                                <line x1="14" y1="13" x2="17.5" y2="16.5"></line>
+                                <line x1="10" y1="11" x2="6.5" y2="7.5"></line>
+                                <line x1="10" y1="13" x2="6.5" y2="16.5"></line>
+                            </svg>
                             <input type="text" id="mindmapContent" value="${element.content}" placeholder="Central Idea..." style="width: 100%; padding: 24px; border: 2px solid #d8b4fe; border-radius: 16px; text-align: center; font-size: 32px; font-weight: 700;" />
-                            <p style="color: #6b7280; margin-top: 16px;">Use connector tool to link to other blocks</p>
+                            <p style="color: #6b7280; margin-top: 16px;">Use arrow tool to connect to other blocks</p>
                         </div>
                     </div>
                 `;
@@ -1027,14 +1176,65 @@
         // Canvas click to create elements
         document.getElementById('infinityCanvas').addEventListener('click', (e) => {
             if (e.target.id === 'infinityCanvas' || e.target.id === 'canvasElements') {
-                if (selectedTool && selectedTool !== 'select' && selectedTool !== 'connector') {
+                if (selectedTool && selectedTool !== 'hand' && selectedTool !== 'arrow') {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
                     createElement(selectedTool, x, y);
-                    selectTool('select');
+                    selectTool('hand');
                     document.querySelectorAll('.canvas-tool-btn')[0].classList.add('active');
                 }
+            }
+        });
+
+        // Drag and drop from Note mode to Canvas
+        let draggedNoteData = null;
+
+        document.querySelectorAll('.note-item').forEach(noteItem => {
+            noteItem.addEventListener('dragstart', (e) => {
+                draggedNoteData = {
+                    title: e.currentTarget.dataset.noteTitle,
+                    content: e.currentTarget.dataset.noteContent
+                };
+                e.currentTarget.style.opacity = '0.5';
+            });
+
+            noteItem.addEventListener('dragend', (e) => {
+                e.currentTarget.style.opacity = '1';
+            });
+        });
+
+        const infinityCanvas = document.getElementById('infinityCanvas');
+
+        infinityCanvas.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+
+        infinityCanvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+
+            if (draggedNoteData && currentMode === 'canvas') {
+                const rect = infinityCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const colors = ['#a78bfa', '#60a5fa', '#34d399', '#fbbf24', '#fb923c', '#f472b6'];
+                const element = {
+                    id: nextId++,
+                    type: 'note',
+                    x: x - 75, // Center the note on drop point
+                    y: y - 75,
+                    width: 200,
+                    height: 200,
+                    content: draggedNoteData.content,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    drawing: null
+                };
+
+                canvasElements.push(element);
+                renderCanvasElements();
+                draggedNoteData = null;
             }
         });
     </script>

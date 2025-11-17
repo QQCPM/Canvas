@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weave - Unified Workspace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a5568;
+        }
+
+        /* Mode Switcher */
+        .mode-switcher {
+            display: inline-flex;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .mode-btn {
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #8b949e;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-btn:hover {
+            color: #c9d1d9;
+        }
+
+        .mode-btn.active {
+            background: #0d1117;
+            color: #ffffff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Sidebar Toggle Button */
+        .sidebar-toggle {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #161b22;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            padding: 8px 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .sidebar-toggle:hover {
+            color: #ffffff;
+            background: #21262d;
+        }
+
+        .sidebar-toggle.left {
+            right: -14px;
+        }
+
+        .sidebar-toggle.right {
+            left: -14px;
+        }
+
+        /* Sidebar transition */
+        .sidebar {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar.collapsed {
+            width: 0 !important;
+            min-width: 0 !important;
+            overflow: hidden;
+        }
+
+        /* Canvas Blocks (from Weave design) */
+        .canvas-block {
+            margin: 8px 0;
+            border-radius: 8px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .canvas-block:hover .block-handle {
+            opacity: 1;
+        }
+
+        .block-handle {
+            position: absolute;
+            left: -24px;
+            top: 4px;
+            width: 20px;
+            height: 20px;
+            opacity: 0;
+            cursor: grab;
+            color: #6e7681;
+            transition: opacity 0.2s;
+        }
+
+        .block-handle:hover {
+            color: #c9d1d9;
+        }
+
+        .text-block {
+            padding: 4px 8px;
+            min-height: 32px;
+        }
+
+        .text-block input,
+        .text-block textarea {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #c9d1d9;
+            width: 100%;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .text-block input::placeholder,
+        .text-block textarea::placeholder {
+            color: #484f58;
+        }
+
+        .text-block.heading-1 input {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        /* Infinity Canvas Styles */
+        .infinity-canvas {
+            background-image: radial-gradient(circle, #21262d 1px, transparent 1px);
+            background-size: 20px 20px;
+            cursor: grab;
+            position: relative;
+        }
+
+        .infinity-canvas.grabbing {
+            cursor: grabbing;
+        }
+
+        .canvas-element {
+            position: absolute;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s;
+            cursor: move;
+        }
+
+        .canvas-element:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+            transform: scale(1.02);
+        }
+
+        .canvas-element.note {
+            padding: 16px;
+            min-width: 150px;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .canvas-element.note .note-icon {
+            font-size: 16px;
+            opacity: 0.7;
+        }
+
+        .canvas-element.note .note-content {
+            flex: 1;
+            color: #0d1117;
+            font-size: 14px;
+            font-weight: 500;
+            overflow: hidden;
+        }
+
+        .canvas-element.drawing {
+            padding: 12px;
+            background: #ffffff;
+            border: 2px solid #30363d;
+            display: flex;
+            align-items: center;
+            justify-center;
+            color: #6e7681;
+        }
+
+        .resize-handle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #58a6ff;
+            border: 1px solid #ffffff;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .canvas-element:hover .resize-handle {
+            opacity: 1;
+        }
+
+        .resize-handle.nw { top: -4px; left: -4px; cursor: nw-resize; }
+        .resize-handle.ne { top: -4px; right: -4px; cursor: ne-resize; }
+        .resize-handle.sw { bottom: -4px; left: -4px; cursor: sw-resize; }
+        .resize-handle.se { bottom: -4px; right: -4px; cursor: se-resize; }
+
+        .canvas-toolbar {
+            background: rgba(22, 27, 34, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 8px;
+            display: flex;
+            gap: 4px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .canvas-tool-btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: transparent;
+            border: none;
+            color: #8b949e;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+        }
+
+        .canvas-tool-btn:hover {
+            background: #0d1117;
+            color: #ffffff;
+        }
+
+        .canvas-tool-btn.active {
+            background: #58a6ff;
+            color: #ffffff;
+        }
+
+        .connection-line {
+            stroke: #58a6ff;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+    </style>
+</head>
+<body class="bg-[#0d1117] text-gray-300 antialiased overflow-hidden">
+    <div class="flex h-screen w-full">
+        <!-- Left Sidebar -->
+        <nav id="leftSidebar" class="sidebar w-60 bg-[#010409] border-r border-[#30363d] flex flex-col relative">
+            <!-- Header with Mode Switcher -->
+            <div class="p-4 h-16 flex items-center border-b border-[#30363d]">
+                <div class="mode-switcher">
+                    <button class="mode-btn active" onclick="switchMode('note')">Note</button>
+                    <button class="mode-btn" onclick="switchMode('canvas')">Canvas</button>
+                </div>
+            </div>
+
+            <!-- Notes Tree -->
+            <div class="flex-1 p-3 space-y-1 overflow-y-auto">
+                <div class="text-xs font-semibold text-gray-500 mb-2 px-2">NOTES</div>
+                <div class="flex items-center gap-2 p-2 rounded-lg bg-[#161b22] text-white cursor-pointer">
+                    <span>📝</span>
+                    <span class="text-sm">My First Note</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 rounded-lg hover:bg-[#161b22] cursor-pointer">
+                    <span>📚</span>
+                    <span class="text-sm text-gray-400">Study Notes</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 rounded-lg hover:bg-[#161b22] cursor-pointer">
+                    <span>💡</span>
+                    <span class="text-sm text-gray-400">Ideas</span>
+                </div>
+            </div>
+
+            <!-- New Note Button -->
+            <div class="p-4">
+                <button class="w-full px-3 py-2 bg-transparent text-gray-400 hover:text-white text-sm transition-all text-left rounded-lg hover:bg-[#161b22]">
+                    + New Note
+                </button>
+            </div>
+
+            <!-- Toggle Button -->
+            <button class="sidebar-toggle left" onclick="toggleSidebar('left')">
+                <span id="leftToggleIcon">‹</span>
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="h-16 bg-[#0d1117] border-b border-[#30363d] flex items-center justify-between px-6">
+                <div class="flex items-center gap-3">
+                    <span id="currentModeIcon" class="text-2xl">📝</span>
+                    <input
+                        type="text"
+                        id="pageTitle"
+                        value="My First Note"
+                        class="text-lg font-semibold bg-transparent border-none outline-none text-white"
+                    />
+                </div>
+                <div class="text-xs text-gray-500">
+                    <span id="modeHint">Type <kbd class="px-2 py-1 bg-[#161b22] rounded text-gray-400">/</kbd> for commands</span>
+                </div>
+            </header>
+
+            <!-- Note Mode Content -->
+            <div id="noteMode" class="flex-1 overflow-y-auto">
+                <div class="max-w-4xl mx-auto py-12 px-8">
+                    <div class="canvas-block text-block heading-1">
+                        <div class="block-handle">⋮⋮</div>
+                        <input type="text" placeholder="Untitled" value="Welcome to Weave" />
+                    </div>
+
+                    <div class="canvas-block text-block">
+                        <div class="block-handle">⋮⋮</div>
+                        <textarea rows="3" placeholder="Type '/' for commands...">Start taking notes here. Switch to Canvas mode to create visual diagrams and mind maps.</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas Mode Content -->
+            <div id="canvasMode" class="flex-1 relative hidden">
+                <!-- Canvas Toolbar (floating) -->
+                <div class="absolute top-6 left-1/2 transform -translate-x-1/2 z-20">
+                    <div class="canvas-toolbar">
+                        <button class="canvas-tool-btn active" onclick="selectTool('select')" title="Select">
+                            <span>↖</span>
+                        </button>
+                        <div class="w-px bg-[#30363d] my-1"></div>
+                        <button class="canvas-tool-btn" onclick="selectTool('note')" title="Note Block">
+                            <span>📝</span>
+                        </button>
+                        <button class="canvas-tool-btn" onclick="selectTool('drawing')" title="Drawing">
+                            <span>✏️</span>
+                        </button>
+                        <button class="canvas-tool-btn" onclick="selectTool('text')" title="Text">
+                            <span>A</span>
+                        </button>
+                        <button class="canvas-tool-btn" onclick="selectTool('mindmap')" title="Mind Map">
+                            <span>🧠</span>
+                        </button>
+                        <button class="canvas-tool-btn" onclick="selectTool('website')" title="Website">
+                            <span>🌐</span>
+                        </button>
+                        <div class="w-px bg-[#30363d] my-1"></div>
+                        <button class="canvas-tool-btn" onclick="selectTool('connector')" title="Connect">
+                            <span>—</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Infinity Canvas -->
+                <div id="infinityCanvas" class="infinity-canvas w-full h-full">
+                    <!-- SVG for connections -->
+                    <svg class="absolute inset-0 pointer-events-none" style="width: 100%; height: 100%; z-index: 1;">
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                <polygon points="0 0, 10 3, 0 6" fill="#58a6ff" />
+                            </marker>
+                        </defs>
+                    </svg>
+
+                    <!-- Example Canvas Elements -->
+                    <div class="canvas-element note bg-purple-400" style="left: 200px; top: 150px;">
+                        <span class="note-icon">📝</span>
+                        <div class="note-content">Start Here</div>
+                        <div class="resize-handle nw"></div>
+                        <div class="resize-handle ne"></div>
+                        <div class="resize-handle sw"></div>
+                        <div class="resize-handle se"></div>
+                    </div>
+
+                    <div class="canvas-element drawing" style="left: 450px; top: 150px; width: 200px; height: 200px;">
+                        <span style="font-size: 48px;">✏️</span>
+                        <div class="resize-handle nw"></div>
+                        <div class="resize-handle ne"></div>
+                        <div class="resize-handle sw"></div>
+                        <div class="resize-handle se"></div>
+                    </div>
+
+                    <div class="canvas-element note bg-green-400" style="left: 750px; top: 150px;">
+                        <span class="note-icon">💡</span>
+                        <div class="note-content">Ideas</div>
+                        <div class="resize-handle nw"></div>
+                        <div class="resize-handle ne"></div>
+                        <div class="resize-handle sw"></div>
+                        <div class="resize-handle se"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar (AI Assistant) -->
+        <aside id="rightSidebar" class="sidebar w-[420px] flex-shrink-0 border-l border-[#30363d] flex flex-col relative"
+            style="background: radial-gradient(circle at top left, rgba(88, 166, 255, 0.08) 0%, rgba(88, 166, 255, 0.03) 40%, #010409 80%);">
+
+            <header class="h-16 border-b border-[#30363d] flex items-center justify-center px-4">
+                <nav class="flex gap-1">
+                    <button class="px-4 py-2 text-sm font-medium text-white bg-[#161b22] rounded-lg">Agent</button>
+                    <button class="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-[#161b22] rounded-lg transition-all">Tools</button>
+                </nav>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div class="bg-[#161b22] rounded-lg p-4 border border-[#30363d]">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-blue-400">🤖</span>
+                        <span class="text-sm font-semibold text-white">AI Assistant</span>
+                    </div>
+                    <p class="text-sm text-gray-400">
+                        I can help you organize your notes, create visual diagrams, and connect ideas across your canvas.
+                    </p>
+                </div>
+
+                <div class="bg-[#161b22] rounded-lg p-4 border border-[#30363d]">
+                    <p class="text-sm text-gray-300 mb-2">Try these commands:</p>
+                    <div class="space-y-1 text-xs">
+                        <div><code class="px-2 py-1 bg-[#0d1117] rounded text-blue-300">/search</code> <span class="text-gray-500">Search knowledge</span></div>
+                        <div><code class="px-2 py-1 bg-[#0d1117] rounded text-blue-300">/improve</code> <span class="text-gray-500">Improve content</span></div>
+                        <div><code class="px-2 py-1 bg-[#0d1117] rounded text-blue-300">/organize</code> <span class="text-gray-500">Organize ideas</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-[#30363d]">
+                <div class="bg-[#161b22] rounded-lg p-3 border border-[#30363d]">
+                    <textarea
+                        class="w-full bg-transparent border-none outline-none text-white text-sm resize-none"
+                        placeholder="Ask me anything..."
+                        rows="2"
+                    ></textarea>
+                    <div class="flex items-center justify-between mt-2">
+                        <button class="text-xs text-gray-500 hover:text-white transition-all">+ Attach</button>
+                        <button class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-all">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toggle Button -->
+            <button class="sidebar-toggle right" onclick="toggleSidebar('right')">
+                <span id="rightToggleIcon">›</span>
+            </button>
+        </aside>
+    </div>
+
+    <script>
+        let currentMode = 'note';
+        let leftSidebarOpen = true;
+        let rightSidebarOpen = true;
+
+        function switchMode(mode) {
+            currentMode = mode;
+            const noteMode = document.getElementById('noteMode');
+            const canvasMode = document.getElementById('canvasMode');
+            const leftSidebar = document.getElementById('leftSidebar');
+            const rightSidebar = document.getElementById('rightSidebar');
+            const modeBtns = document.querySelectorAll('.mode-btn');
+            const modeIcon = document.getElementById('currentModeIcon');
+            const pageTitle = document.getElementById('pageTitle');
+            const modeHint = document.getElementById('modeHint');
+
+            // Update mode buttons
+            modeBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toLowerCase() === mode);
+            });
+
+            if (mode === 'note') {
+                noteMode.classList.remove('hidden');
+                canvasMode.classList.add('hidden');
+                modeIcon.textContent = '📝';
+                pageTitle.value = 'My First Note';
+                modeHint.innerHTML = 'Type <kbd class="px-2 py-1 bg-[#161b22] rounded text-gray-400">/</kbd> for commands';
+
+                // Show sidebars in note mode
+                if (!leftSidebarOpen) toggleSidebar('left');
+                if (!rightSidebarOpen) toggleSidebar('right');
+            } else {
+                noteMode.classList.add('hidden');
+                canvasMode.classList.remove('hidden');
+                modeIcon.textContent = '🎨';
+                pageTitle.value = 'Infinity Canvas';
+                modeHint.innerHTML = 'Click and drag to pan • Scroll to zoom';
+
+                // Hide sidebars in canvas mode by default
+                if (leftSidebarOpen) toggleSidebar('left');
+                if (rightSidebarOpen) toggleSidebar('right');
+            }
+        }
+
+        function toggleSidebar(side) {
+            const sidebar = document.getElementById(side + 'Sidebar');
+            const icon = document.getElementById(side + 'ToggleIcon');
+
+            if (side === 'left') {
+                leftSidebarOpen = !leftSidebarOpen;
+                sidebar.classList.toggle('collapsed');
+                icon.textContent = leftSidebarOpen ? '‹' : '›';
+            } else {
+                rightSidebarOpen = !rightSidebarOpen;
+                sidebar.classList.toggle('collapsed');
+                icon.textContent = rightSidebarOpen ? '›' : '‹';
+            }
+        }
+
+        let selectedTool = 'select';
+
+        function selectTool(tool) {
+            selectedTool = tool;
+            document.querySelectorAll('.canvas-tool-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+
+        // Basic canvas panning
+        let isPanning = false;
+        let startX, startY;
+        let scrollLeft, scrollTop;
+
+        const canvas = document.getElementById('infinityCanvas');
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (selectedTool === 'select' && e.target === canvas) {
+                isPanning = true;
+                canvas.classList.add('grabbing');
+                startX = e.pageX - canvas.offsetLeft;
+                startY = e.pageY - canvas.offsetTop;
+                scrollLeft = canvas.scrollLeft;
+                scrollTop = canvas.scrollTop;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            e.preventDefault();
+            const x = e.pageX - canvas.offsetLeft;
+            const y = e.pageY - canvas.offsetTop;
+            const walkX = (x - startX) * 1;
+            const walkY = (y - startY) * 1;
+            canvas.scrollLeft = scrollLeft - walkX;
+            canvas.scrollTop = scrollTop - walkY;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isPanning = false;
+            canvas.classList.remove('grabbing');
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isPanning = false;
+            canvas.classList.remove('grabbing');
+        });
+
+        // Make canvas elements draggable
+        const elements = document.querySelectorAll('.canvas-element');
+        elements.forEach(elem => {
+            let isDragging = false;
+            let currentX, currentY, initialX, initialY;
+
+            elem.addEventListener('mousedown', (e) => {
+                if (selectedTool !== 'select') return;
+                if (e.target.classList.contains('resize-handle')) return;
+
+                isDragging = true;
+                initialX = e.clientX - elem.offsetLeft;
+                initialY = e.clientY - elem.offsetTop;
+                elem.style.zIndex = 1000;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+
+                elem.style.left = currentX + 'px';
+                elem.style.top = currentY + 'px';
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    elem.style.zIndex = 'auto';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
